@@ -1,43 +1,26 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Bell,
-  User,
-  Menu,
-  Users,
-  Sparkles,
-  ClipboardCheck,
-  Megaphone,
-  LayoutDashboard,
-  CheckSquare,
-  ArrowLeft,
-  Plus,
-  Calendar,
-  Trash2,
+  Bell, User, Menu, Users, Sparkles, ClipboardCheck,
+  Megaphone, LayoutDashboard, CheckSquare, ArrowLeft,
+  Plus, Calendar, Trash2,
 } from "lucide-react";
 import ComaLogo from "@/components/ComaLogo";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-import { createVote } from "@/api/votes"; 
+import { createVote } from "@/api/votes";
 
 const Admin_Vote_Create = () => {
   const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState(""); 
-  const [deadlineDate, setDeadlineDate] = useState(""); 
-  const [deadlineTime, setDeadlineTime] = useState("12:00"); 
-  const [isMultiple, setIsMultiple] = useState(false); 
+  const [deadlineDate, setDeadlineDate] = useState("");
+  const [deadlineTime, setDeadlineTime] = useState("23:59");
+  const [isMultiple, setIsMultiple] = useState(false);
   const [options, setOptions] = useState<string[]>(["", ""]);
-
-  const [submitting, setSubmitting] = useState(false); 
+  const [submitting, setSubmitting] = useState(false);
 
   const handleAddOption = () => {
     if (submitting) return;
@@ -46,7 +29,7 @@ const Admin_Vote_Create = () => {
 
   const handleRemoveOption = (index: number) => {
     if (submitting) return;
-    if (options.length <= 2) return; // 최소 2개 유지
+    if (options.length <= 2) return;
     setOptions((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -57,9 +40,9 @@ const Admin_Vote_Create = () => {
     setOptions(newOptions);
   };
 
+  // "2026-03-31T23:59:59" 형식
   const toServerDeadline = (dateStr: string, timeStr: string) => {
-    //2026-02-20, 12:00
-    return `${dateStr}T${timeStr}:00`;
+    return `${dateStr}T${timeStr}:59`;
   };
 
   const validationError = useMemo(() => {
@@ -123,10 +106,7 @@ const Admin_Vote_Create = () => {
                   <Menu className="w-5 h-5 text-white" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-32 bg-white border border-gray-200 shadow-lg rounded-lg z-[100]"
-              >
+              <DropdownMenuContent align="end" className="w-32 bg-white border border-gray-200 shadow-lg rounded-lg z-[100]">
                 <DropdownMenuItem
                   className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
                   onClick={() => navigate("/")}
@@ -169,6 +149,7 @@ const Admin_Vote_Create = () => {
       </div>
 
       <main className="flex-1 px-4 py-6 pb-24">
+        {/* 안내 배너 */}
         <div className="rounded-2xl p-4 mb-6" style={{ backgroundColor: "#D1FAE5" }}>
           <div className="flex items-start gap-3">
             <div
@@ -178,9 +159,7 @@ const Admin_Vote_Create = () => {
               <CheckSquare className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-bold mb-2" style={{ color: "#0F4C3A" }}>
-                투표 생성 안내
-              </h3>
+              <h3 className="font-bold mb-2" style={{ color: "#0F4C3A" }}>투표 생성 안내</h3>
               <ul className="space-y-1 text-sm" style={{ color: "#0F4C3A" }}>
                 <li>• 운영진만 투표를 생성할 수 있어요</li>
                 <li>• 투표 참여 시 회원은 2 XP를 받아요</li>
@@ -191,6 +170,8 @@ const Admin_Vote_Create = () => {
         </div>
 
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
+
+          {/* 투표 제목 */}
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2" style={{ color: "#0F4C3A" }}>
               투표 제목 <span style={{ color: "#EF4444" }}>*</span>
@@ -205,20 +186,7 @@ const Admin_Vote_Create = () => {
             />
           </div>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2" style={{ color: "#0F4C3A" }}>
-              설명
-            </label>
-            <Textarea
-              placeholder="투표에 대한 설명을 입력하세요..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-xl border-gray-200 min-h-[100px] resize-none"
-              style={{ backgroundColor: "#F8FFFE" }}
-              disabled={submitting}
-            />
-          </div>
-
+          {/* 투표 방식 */}
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2" style={{ color: "#0F4C3A" }}>
               투표 방식 <span style={{ color: "#EF4444" }}>*</span>
@@ -230,7 +198,7 @@ const Admin_Vote_Create = () => {
                 onClick={() => setIsMultiple(false)}
                 className="flex-1 py-3 rounded-xl text-sm font-medium border"
                 style={{
-                  backgroundColor: isMultiple ? "#FFFFFF" : "#D1FAE5",
+                  backgroundColor: !isMultiple ? "#D1FAE5" : "#FFFFFF",
                   borderColor: "#D1FAE5",
                   color: "#0F4C3A",
                 }}
@@ -253,12 +221,12 @@ const Admin_Vote_Create = () => {
             </div>
           </div>
 
+          {/* 마감일 */}
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2 flex items-center gap-1" style={{ color: "#0F4C3A" }}>
               <Calendar className="w-4 h-4" />
               마감일 <span style={{ color: "#EF4444" }}>*</span>
             </label>
-
             <div className="flex gap-2">
               <Input
                 type="date"
@@ -279,14 +247,13 @@ const Admin_Vote_Create = () => {
             </div>
           </div>
 
+          {/* 선택지 */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium" style={{ color: "#0F4C3A" }}>
                 선택지 <span style={{ color: "#EF4444" }}>*</span>
               </label>
-              <span className="text-xs" style={{ color: "#6B7280" }}>
-                최소 2개 / 최대 10개
-              </span>
+              <span className="text-xs" style={{ color: "#6B7280" }}>최소 2개 / 최대 10개</span>
             </div>
 
             <div className="space-y-2">
@@ -300,7 +267,6 @@ const Admin_Vote_Create = () => {
                     style={{ backgroundColor: "#F8FFFE" }}
                     disabled={submitting}
                   />
-
                   <button
                     type="button"
                     onClick={() => handleRemoveOption(index)}
@@ -311,7 +277,6 @@ const Admin_Vote_Create = () => {
                       backgroundColor: "#FFFFFF",
                       color: options.length <= 2 ? "#9CA3AF" : "#EF4444",
                     }}
-                    title="선택지 삭제"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -333,28 +298,22 @@ const Admin_Vote_Create = () => {
             )}
           </div>
 
+          {/* 보상 안내 */}
           <div
             className="flex items-center justify-between p-3 rounded-xl"
             style={{ backgroundColor: "#F8FFFE", border: "1px solid #D1FAE5" }}
           >
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4" style={{ color: "#10B981" }} />
-              <span className="text-sm font-medium" style={{ color: "#0F4C3A" }}>
-                투표 참여 보상
-              </span>
+              <span className="text-sm font-medium" style={{ color: "#0F4C3A" }}>투표 참여 보상</span>
             </div>
-            <span
-              className="px-2 py-1 rounded text-xs font-medium"
-              style={{ backgroundColor: "#D1FAE5", color: "#10B981" }}
-            >
+            <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: "#D1FAE5", color: "#10B981" }}>
               +2 XP
             </span>
           </div>
 
           {validationError && (
-            <p className="mt-3 text-sm" style={{ color: "#EF4444" }}>
-              {validationError}
-            </p>
+            <p className="mt-3 text-sm" style={{ color: "#EF4444" }}>{validationError}</p>
           )}
         </div>
 
@@ -375,33 +334,23 @@ const Admin_Vote_Create = () => {
       >
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/admin")}>
           <LayoutDashboard className="w-5 h-5" style={{ color: "#6B7280" }} />
-          <span className="text-xs" style={{ color: "#6B7280" }}>
-            대시보드
-          </span>
+          <span className="text-xs" style={{ color: "#6B7280" }}>대시보드</span>
         </button>
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/admin/members")}>
           <Users className="w-5 h-5" style={{ color: "#6B7280" }} />
-          <span className="text-xs" style={{ color: "#6B7280" }}>
-            부원
-          </span>
+          <span className="text-xs" style={{ color: "#6B7280" }}>부원</span>
         </button>
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/admin/xp")}>
           <Sparkles className="w-5 h-5" style={{ color: "#6B7280" }} />
-          <span className="text-xs" style={{ color: "#6B7280" }}>
-            XP
-          </span>
+          <span className="text-xs" style={{ color: "#6B7280" }}>XP</span>
         </button>
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/admin/attendance")}>
           <ClipboardCheck className="w-5 h-5" style={{ color: "#6B7280" }} />
-          <span className="text-xs" style={{ color: "#6B7280" }}>
-            출석
-          </span>
+          <span className="text-xs" style={{ color: "#6B7280" }}>출석</span>
         </button>
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/admin/vote")}>
           <Megaphone className="w-5 h-5" style={{ color: "#10B981" }} />
-          <span className="text-xs font-medium" style={{ color: "#10B981" }}>
-            공지
-          </span>
+          <span className="text-xs font-medium" style={{ color: "#10B981" }}>공지</span>
         </button>
       </nav>
     </div>

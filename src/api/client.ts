@@ -2,9 +2,14 @@ export const API_BASE = "http://localhost:8080";
 
 function authHeaders(): HeadersInit {
   const token = localStorage.getItem("accessToken");
+  const validToken = token && token !== "undefined" && token !== "null" ? token : null;
+
+  console.log("token from localStorage:", token);
+  console.log("validToken:", validToken);
+
   return {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(validToken ? { Authorization: `Bearer ${validToken}` } : {}),
   };
 }
 

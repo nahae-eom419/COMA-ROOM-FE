@@ -28,7 +28,7 @@ type LoginData = {
 };
 
 function normalizeRole(role: unknown): User["role"] {
-  return role === "Admin" ? "admin" : "user";
+  return typeof role === "string" && role.toUpperCase() === "ADMIN" ? "admin" : "user";
 }
 
 const Index = () => {
@@ -42,26 +42,24 @@ const Index = () => {
       const data = await apiFetch<LoginData>("/api/auth/login", {
         method: "POST",
         headers: {
-      "Content-Type": "multipart/form-data",
-    },
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ studentId, password }),
       });
 
+      const payload = decodeJwtPayload(data.accessToken);
+
       const user: User = {
-        id: data.user.id,
-        name: data.user.name,
-        studentId: data.user.studentId,
-        role: normalizeRole(data.user.role),
+        id: data.user?.id ?? payload?.id,
+        name: data.user?.name ?? data.name ?? payload?.name ?? "",
+        studentId: data.user?.studentId ?? studentId,
+        role: normalizeRole(data.user?.role ?? payload?.role),
       };
 
       localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("refreshToken", data.refreshToken);
-      localStorage.setItem("name", data.name ?? user.name ?? "");
+      localStorage.setItem("name", user.name);
       localStorage.setItem("user", JSON.stringify(user));
-
-      toast.success("로그인 성공", {
-        description: data.message ?? "환영합니다.",
-      });
 
       login({
         user,
@@ -69,10 +67,14 @@ const Index = () => {
         refreshToken: data.refreshToken,
       });
 
-      const payload = decodeJwtPayload(data.accessToken);
-      const role = (payload?.role === "Admin" || payload?.role === "user")
-        ? (payload.role as User["role"])
-        : user.role;
+      toast.success("로그인 성공", {
+        description: data.message ?? "환영합니다.",
+      });
+
+      const role: User["role"] =
+        payload?.role === "Admin" || payload?.role === "admin"
+          ? "admin"
+          : user.role;
 
       if (role === "admin") {
         toast.success("관리자 로그인 성공!", {
@@ -95,7 +97,6 @@ const Index = () => {
   return (
     <div className="min-h-screen gradient-mint flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-[380px]">
-        {/* 상단 로고 영역 */}
         <div className="flex flex-col items-center mb-6">
           <img src={comaLogo} alt="COMA Logo" className="w-24 h-24 rounded-2xl" />
           <h1
@@ -109,7 +110,6 @@ const Index = () => {
           </p>
         </div>
 
-        {/* 로그인 카드 */}
         <div
           className="rounded-2xl p-6"
           style={{
