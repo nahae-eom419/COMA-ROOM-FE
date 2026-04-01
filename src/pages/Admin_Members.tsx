@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiFetch } from "@/api/client";
 import { Bell, User, Menu, Users, Sparkles, Search, Edit, Trash2, ChevronLeft, ChevronRight, LayoutDashboard, ClipboardCheck, Megaphone, UserPlus, Plus, Minus } from "lucide-react";
 import ComaLogo from "@/components/ComaLogo";
 import {
@@ -24,14 +25,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useXP } from "@/contexts/XPContext";
-import { useLeaderboard, CURRENT_USER } from "@/contexts/LeaderboardContext";
 
 interface Member {
   id: number;
   rank: number;
   name: string;
-  grade: number;
   studentId: string;
   department: string;
   xp: number;
@@ -39,29 +37,37 @@ interface Member {
   events: number;
 }
 
-// 부원 더미 데이터
-const initialMembersData: Member[] = [
-  { id: 1, rank: 1, name: "서진호", grade: 3, studentId: "2021123456", department: "컴퓨터정보공학부", xp: 85, attendance: 12, events: 5 },
-  { id: 2, rank: 2, name: "김동현", grade: 4, studentId: "202121160", department: "컴퓨터정보공학부", xp: 80, attendance: 11, events: 5 },
-  { id: 3, rank: 3, name: "엄나해", grade: 3, studentId: "2021123451", department: "컴퓨터정보공학부", xp: 79, attendance: 9, events: 5 },
-  { id: 4, rank: 4, name: "서준하", grade: 3, studentId: "202223545", department: "컴퓨터정보공학부", xp: 78, attendance: 9, events: 4 },
-  { id: 5, rank: 5, name: "권유진", grade: 3, studentId: "2021123456", department: "컴퓨터정보공학부", xp: 78, attendance: 8, events: 5 },
-  { id: 6, rank: 6, name: "최진욱", grade: 3, studentId: "2021111223", department: "컴퓨터정보공학부", xp: 18, attendance: 6, events: 2 },
-];
+interface ApiMember {
+  name: string;
+  studentId: string;
+  major: string;
+  xp: number;
+  eventAttendance: number;
+  meetingAttendance: number;
+}
+
+interface MemberPageData {
+  totalMember: number;
+  activateMember: number;
+  averageXp: number;
+  memberInformationResponseDtos: ApiMember[];
+  currentPage: number;
+  totalPages: number;
+  totalElements: number;
+}
 
 const Admin_Members = () => {
   const navigate = useNavigate();
-  const { addXP, setTotalXP } = useXP();
-  const { updateMemberXP, setMemberXP } = useLeaderboard();
-  const [members, setMembers] = useState<Member[]>(initialMembersData);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [pageData, setPageData] = useState<Pick<MemberPageData, "totalMember" | "activateMember" | "averageXp" | "totalPages"> | null>(null);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = 5;
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", grade: "", studentId: "", department: "" });
+  const [editForm, setEditForm] = useState({ name: "", studentId: "", department: "" });
 
   // XP Management Modal State
   const [isXPModalOpen, setIsXPModalOpen] = useState(false);
@@ -73,43 +79,57 @@ const Admin_Members = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingMember, setDeletingMember] = useState<Member | null>(null);
 
+  useEffect(() => {
+    const fetchMembers = async () => {
+      setLoading(true);
+      try {
+        const res = await apiFetch<MemberPageData>(`/api/admin/member/manage?page=${currentPage - 1}`);
+        const mapped: Member[] = (res.memberInformationResponseDtos ?? []).map((m, i) => ({
+          id: (currentPage - 1) * 10 + i + 1,
+          rank: (currentPage - 1) * 10 + i + 1,
+          name: m.name,
+          studentId: m.studentId,
+          department: m.major,
+          xp: m.xp,
+          attendance: m.meetingAttendance,
+          events: m.eventAttendance,
+        }));
+        setMembers(mapped);
+        setPageData({
+          totalMember: res.totalMember,
+          activateMember: res.activateMember,
+          averageXp: res.averageXp,
+          totalPages: res.totalPages,
+        });
+      } catch (e) {
+        console.error("부원 목록 조회 실패:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMembers();
+  }, [currentPage]);
+
   const filteredMembers = members.filter(
     (member) =>
       member.name.includes(searchQuery) ||
       member.studentId.includes(searchQuery)
   );
 
-  // Recalculate ranks after any member update
-  const recalculateRanks = (membersList: Member[]) => {
-    return membersList
-      .sort((a, b) => b.xp - a.xp)
-      .map((member, index) => ({ ...member, rank: index + 1 }));
-  };
-
-  // Edit handlers
+  // Edit handlers (로컬 상태만 변경 - 백엔드 수정 API 미지원)
   const handleEditClick = (member: Member) => {
     setEditingMember(member);
-    setEditForm({
-      name: member.name,
-      grade: member.grade.toString(),
-      studentId: member.studentId,
-      department: member.department,
-    });
+    setEditForm({ name: member.name, studentId: member.studentId, department: member.department });
     setIsEditModalOpen(true);
   };
 
   const handleEditSave = () => {
     if (!editingMember) return;
-    
-    setMembers(prev => {
-      const updated = prev.map(m => 
-        m.id === editingMember.id
-          ? { ...m, name: editForm.name, grade: parseInt(editForm.grade) || m.grade, studentId: editForm.studentId, department: editForm.department }
-          : m
-      );
-      return recalculateRanks(updated);
-    });
-    
+    setMembers(prev => prev.map(m =>
+      m.id === editingMember.id
+        ? { ...m, name: editForm.name, studentId: editForm.studentId, department: editForm.department }
+        : m
+    ));
     setIsEditModalOpen(false);
     setEditingMember(null);
   };
@@ -124,37 +144,11 @@ const Admin_Members = () => {
 
   const handleXPSave = () => {
     if (!xpMember || xpAmount === 0) return;
-    
-    const newXP = Math.max(0, xpMember.xp + xpAmount);
-    
-    // 로컬 멤버 리스트 업데이트
-    setMembers(prev => {
-      const updated = prev.map(m => 
-        m.id === xpMember.id
-          ? { ...m, xp: newXP }
-          : m
-      );
-      return recalculateRanks(updated);
-    });
-
-    // 리더보드 Context에도 반영
-    setMemberXP(xpMember.name, newXP);
-
-    // 로그인한 사용자(최진욱)의 XP인 경우 전역 XP Context에도 반영
-    if (xpMember.name === CURRENT_USER) {
-      if (xpAmount > 0) {
-        addXP(xpAmount, xpReason || "관리자 XP 지급", "행사");
-      } else {
-        // XP 감소의 경우 totalXP 직접 설정
-        setTotalXP(newXP);
-      }
-    }
-    
+    navigate("/admin/xp/grant");
     setIsXPModalOpen(false);
-    setXPMember(null);
   };
 
-  // Delete handlers
+  // Delete handlers (로컬 상태만 변경 - 백엔드 삭제 API 미지원)
   const handleDeleteClick = (member: Member) => {
     setDeletingMember(member);
     setIsDeleteDialogOpen(true);
@@ -162,12 +156,7 @@ const Admin_Members = () => {
 
   const handleDeleteConfirm = () => {
     if (!deletingMember) return;
-    
-    setMembers(prev => {
-      const filtered = prev.filter(m => m.id !== deletingMember.id);
-      return recalculateRanks(filtered);
-    });
-    
+    setMembers(prev => prev.filter(m => m.id !== deletingMember.id));
     setIsDeleteDialogOpen(false);
     setDeletingMember(null);
   };
@@ -235,7 +224,7 @@ const Admin_Members = () => {
           </button>
         </div>
         <p className="text-sm mb-4" style={{ color: '#6B7280' }}>
-          전체 {members.length}명의 부원을 관리하세요
+          전체 {pageData?.totalMember ?? members.length}명의 부원을 관리하세요
         </p>
 
         {/* Search Bar */}
@@ -257,34 +246,26 @@ const Admin_Members = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div 
-            className="rounded-xl p-4 text-center"
-            style={{ backgroundColor: '#FFFFFF', border: '1px solid #D1FAE5' }}
-          >
-            <p className="text-2xl font-bold" style={{ color: '#10B981' }}>{members.length}</p>
+          <div className="rounded-xl p-4 text-center" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D1FAE5' }}>
+            <p className="text-2xl font-bold" style={{ color: '#10B981' }}>{pageData?.totalMember ?? "-"}</p>
             <p className="text-xs" style={{ color: '#6B7280' }}>전체 부원</p>
           </div>
-          <div 
-            className="rounded-xl p-4 text-center"
-            style={{ backgroundColor: '#FFFFFF', border: '1px solid #D1FAE5' }}
-          >
-            <p className="text-2xl font-bold" style={{ color: '#10B981' }}>{members.length}</p>
+          <div className="rounded-xl p-4 text-center" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D1FAE5' }}>
+            <p className="text-2xl font-bold" style={{ color: '#10B981' }}>{pageData?.activateMember ?? "-"}</p>
             <p className="text-xs" style={{ color: '#6B7280' }}>활성 부원</p>
           </div>
-          <div 
-            className="rounded-xl p-4 text-center"
-            style={{ backgroundColor: '#FFFFFF', border: '1px solid #D1FAE5' }}
-          >
-            <p className="text-2xl font-bold" style={{ color: '#0F4C3A' }}>
-              {members.length > 0 ? Math.round(members.reduce((sum, m) => sum + m.xp, 0) / members.length) : 0}
-            </p>
+          <div className="rounded-xl p-4 text-center" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D1FAE5' }}>
+            <p className="text-2xl font-bold" style={{ color: '#0F4C3A' }}>{pageData?.averageXp ?? "-"}</p>
             <p className="text-xs" style={{ color: '#6B7280' }}>평균 XP</p>
           </div>
         </div>
 
         {/* Members List */}
+        {loading && (
+          <div className="text-center py-10 text-sm" style={{ color: '#6B7280' }}>불러오는 중...</div>
+        )}
         <div className="space-y-3">
-          {filteredMembers.map((member) => (
+          {!loading && filteredMembers.map((member) => (
             <div
               key={member.id}
               className="rounded-xl p-4"
@@ -304,12 +285,6 @@ const Admin_Members = () => {
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="font-bold text-base" style={{ color: '#0F4C3A' }}>
                       {member.name}
-                    </span>
-                    <span 
-                      className="px-2 py-0.5 rounded text-xs font-medium"
-                      style={{ backgroundColor: '#D1FAE5', color: '#10B981' }}
-                    >
-                      {member.grade}학년
                     </span>
                   </div>
                   <p className="text-sm" style={{ color: '#6B7280' }}>{member.studentId}</p>
@@ -366,36 +341,40 @@ const Admin_Members = () => {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-center gap-2 mt-6">
-          <button 
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ backgroundColor: '#FFFFFF', border: '1px solid #D1FAE5' }}
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-          >
-            <ChevronLeft className="w-4 h-4" style={{ color: '#6B7280' }} />
-          </button>
-          {[1, 2, 3, 4, 5].map((page) => (
+        {pageData && pageData.totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6">
             <button
-              key={page}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium"
-              style={{ 
-                backgroundColor: currentPage === page ? '#10B981' : '#FFFFFF',
-                color: currentPage === page ? '#FFFFFF' : '#6B7280',
-                border: currentPage === page ? 'none' : '1px solid #D1FAE5'
-              }}
-              onClick={() => setCurrentPage(page)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: '#FFFFFF', border: '1px solid #D1FAE5' }}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
             >
-              {page}
+              <ChevronLeft className="w-4 h-4" style={{ color: '#6B7280' }} />
             </button>
-          ))}
-          <button 
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ backgroundColor: '#FFFFFF', border: '1px solid #D1FAE5' }}
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-          >
-            <ChevronRight className="w-4 h-4" style={{ color: '#6B7280' }} />
-          </button>
-        </div>
+            {Array.from({ length: pageData.totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium"
+                style={{
+                  backgroundColor: currentPage === page ? '#10B981' : '#FFFFFF',
+                  color: currentPage === page ? '#FFFFFF' : '#6B7280',
+                  border: currentPage === page ? 'none' : '1px solid #D1FAE5'
+                }}
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: '#FFFFFF', border: '1px solid #D1FAE5' }}
+              onClick={() => setCurrentPage(p => Math.min(pageData.totalPages, p + 1))}
+              disabled={currentPage === pageData.totalPages}
+            >
+              <ChevronRight className="w-4 h-4" style={{ color: '#6B7280' }} />
+            </button>
+          </div>
+        )}
       </main>
 
       {/* Edit Modal */}
@@ -412,18 +391,6 @@ const Admin_Members = () => {
               <Input
                 value={editForm.name}
                 onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full"
-                style={{ borderColor: '#D1FAE5' }}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: '#0F4C3A' }}>학년</label>
-              <Input
-                type="number"
-                min={1}
-                max={4}
-                value={editForm.grade}
-                onChange={(e) => setEditForm(prev => ({ ...prev, grade: e.target.value }))}
                 className="w-full"
                 style={{ borderColor: '#D1FAE5' }}
               />

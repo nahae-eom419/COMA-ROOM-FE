@@ -23,8 +23,12 @@ type LoginData = {
   message: string;
   accessToken: string;
   refreshToken: string;
+  role: string;
+};
+
+type ProfileData = {
   name: string;
-  user: { id: number; name: string; studentId: string; role: string };
+  studentId: string;
 };
 
 function normalizeRole(role: unknown): User["role"] {
@@ -36,7 +40,7 @@ const Index = () => {
   const { login } = useAuth();
 
   const handleLogin = async (studentId: string, password: string) => {
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     try {
       const data = await apiFetch<LoginData>("/api/auth/login", {
@@ -48,16 +52,25 @@ const Index = () => {
       });
 
       const payload = decodeJwtPayload(data.accessToken);
-
-      const user: User = {
-        id: data.user?.id ?? payload?.id,
-        name: data.user?.name ?? data.name ?? payload?.name ?? "",
-        studentId: data.user?.studentId ?? studentId,
-        role: normalizeRole(data.user?.role ?? payload?.role),
-      };
+      const role = normalizeRole(data.role ?? payload?.role);
 
       localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("refreshToken", data.refreshToken);
+
+      let profile: ProfileData | null = null;
+      try {
+        profile = await apiFetch<ProfileData>("/api/member/profile");
+      } catch {
+        profile = null;
+      }
+
+      const user: User = {
+        id: typeof payload?.id === "number" ? payload.id : 0,
+        name: profile?.name ?? payload?.name ?? studentId,
+        studentId: profile?.studentId ?? studentId,
+        role,
+      };
+
       localStorage.setItem("name", user.name);
       localStorage.setItem("user", JSON.stringify(user));
 
@@ -71,25 +84,20 @@ const Index = () => {
         description: data.message ?? "환영합니다.",
       });
 
-      const role: User["role"] =
-        payload?.role === "Admin" || payload?.role === "admin"
-          ? "admin"
-          : user.role;
-
       if (role === "admin") {
-        toast.success("관리자 로그인 성공!", {
-          description: "COMA-ROOM 관리자 모드에 오신 것을 환영합니다.",
+        toast.success("관리자 로그인 성공", {
+          description: "COMA-ROOM 관리자 모드로 이동합니다.",
         });
         navigate("/admin", { replace: true });
       } else {
-        toast.success("로그인 성공!", {
+        toast.success("로그인 성공", {
           description: "COMA-ROOM에 오신 것을 환영합니다.",
         });
         navigate("/main", { replace: true });
       }
-    } catch (err: any) {
+    } catch (err) {
       toast.error("로그인 실패", {
-        description: err?.message ?? "학번 또는 비밀번호가 올바르지 않습니다.",
+        description: err instanceof Error ? err.message : "학번 또는 비밀번호가 올바르지 않습니다.",
       });
     }
   };
@@ -106,7 +114,7 @@ const Index = () => {
             COMA-ROOM
           </h1>
           <p className="text-sm mt-1" style={{ color: "#6B7280" }}>
-            COMA 동아리 회원 전용 플랫폼
+            COMA 동아리 부원 전용 플랫폼
           </p>
         </div>
 
@@ -122,10 +130,10 @@ const Index = () => {
             style={{ borderBottom: "1px solid #D1FAE5" }}
           >
             <h2 className="text-base font-bold" style={{ color: "#0F4C3A" }}>
-              회원 로그인
+              부원 로그인
             </h2>
             <p className="text-sm mt-1" style={{ color: "#6B7280" }}>
-              COMA 동아리 회원만 접근 가능합니다
+              COMA 동아리 부원만 접근 가능합니다
             </p>
           </div>
 

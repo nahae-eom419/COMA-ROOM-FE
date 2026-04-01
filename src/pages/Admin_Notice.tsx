@@ -32,6 +32,19 @@ type Notice = {
   author?: string;
 };
 
+type ApiNotice = {
+  noticeId: number;
+  noticeTitle: string;
+  noticeContent: string;
+  noticePriority: NoticePriority;
+  createdAt: string;
+};
+
+type NoticeListResponse = {
+  pinnedNoticeList: ApiNotice[];
+  openedNoticeList: ApiNotice[];
+};
+
 const PRIORITY_LABEL: Record<NoticePriority, string> = {
   NORMAL: "일반",
   IMPORTANT: "중요",
@@ -72,8 +85,19 @@ const Admin_Notice = () => {
   const fetchNotices = async () => {
     setLoading(true);
     try {
-      const data = await apiFetch<Notice[]>("/api/admin/notice");
-      setNotices(data ?? []);
+      const data = await apiFetch<NoticeListResponse>("/api/notice");
+      const toNotice = (n: ApiNotice, pinned: boolean): Notice => ({
+        noticeId: n.noticeId,
+        title: n.noticeTitle,
+        content: n.noticeContent,
+        pinned,
+        hidden: false,
+        noticePriority: n.noticePriority,
+        date: n.createdAt?.split("T")[0],
+      });
+      const pinned = (data.pinnedNoticeList ?? []).map(n => toNotice(n, true));
+      const opened = (data.openedNoticeList ?? []).map(n => toNotice(n, false));
+      setNotices([...pinned, ...opened]);
     } catch (e) {
       console.error("공지 목록 조회 실패:", e);
     } finally {

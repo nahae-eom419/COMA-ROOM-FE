@@ -23,9 +23,22 @@ export type CreateVoteRequest = {
   options: { content: string }[];
 };
 
+export type UpdateVoteRequest = {
+  title?: string;
+  isMultiple?: boolean;
+  deadline?: string;
+};
+
 export function createVote(payload: CreateVoteRequest) {
   return apiFetch<Vote>("/api/admin/votes", {
     method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateVote(voteId: number, payload: UpdateVoteRequest) {
+  return apiFetch<Vote>(`/api/admin/votes/${voteId}`, {
+    method: "PATCH",
     body: JSON.stringify(payload),
   });
 }

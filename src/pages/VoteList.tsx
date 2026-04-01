@@ -1,15 +1,33 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Bell, User, Menu, CheckSquare, Users, Clock, CheckCircle,
-  Sparkles, Home, CalendarDays, Megaphone, UserCircle,
-  ChevronLeft, ChevronRight, Check, CalendarCheck, Vote,
-  BookOpen, Images, Settings,
+  Bell,
+  User,
+  Menu,
+  CheckSquare,
+  Users,
+  Clock,
+  CheckCircle,
+  Sparkles,
+  Home,
+  CalendarDays,
+  Megaphone,
+  UserCircle,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  CalendarCheck,
+  Vote,
+  BookOpen,
+  Images,
+  Settings,
 } from "lucide-react";
 import ComaLogo from "@/components/ComaLogo";
-import { useXP } from "@/contexts/XPContext";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { apiFetch } from "@/api/client";
 
@@ -29,8 +47,6 @@ type ApiVote = {
 
 const VoteList = () => {
   const navigate = useNavigate();
-  const { addXP } = useXP();
-
   const [activeTab, setActiveTab] = useState<"active" | "ended">("active");
   const [activeVotesApi, setActiveVotesApi] = useState<ApiVote[]>([]);
   const [endedVotesApi, setEndedVotesApi] = useState<ApiVote[]>([]);
@@ -45,11 +61,12 @@ const VoteList = () => {
     try {
       const [activeData, endedData] = await Promise.all([
         apiFetch<ApiVote[]>(`/api/vote/votes?page=${page + 1}&status=IN_PROGRESS`),
-        apiFetch<ApiVote[]>(`/api/vote/votes?page=${page + 1}1&status=CLOSED`),
+        apiFetch<ApiVote[]>(`/api/vote/votes?page=${page + 1}&status=CLOSED`),
       ]);
 
       setActiveVotesApi(activeData ?? []);
       setEndedVotesApi(endedData ?? []);
+      setTotalPages(Math.max(1, endedData?.length ? page + 2 : page + 1));
     } catch (e) {
       console.error("투표 목록 조회 실패:", e);
     } finally {
@@ -84,20 +101,14 @@ const VoteList = () => {
     if (picked.length === 0) return;
 
     try {
-      const updated = await apiFetch<ApiVote>(
-        `/api/vote/votes/${vote.voteId}/participate`,
-        {
-          method: "POST",
-          body: JSON.stringify({ voteOptionId: picked }),
-        }
-      );
+      const updated = await apiFetch<ApiVote>(`/api/vote/votes/${vote.voteId}/participate`, {
+        method: "POST",
+        body: JSON.stringify({ voteOptionId: picked }),
+      });
 
-      addXP(2, vote.title, "투표");
       setVotedIds((prev) => (prev.includes(vote.voteId) ? prev : [...prev, vote.voteId]));
       setSelectedOptionIds((prev) => ({ ...prev, [vote.voteId]: [] }));
-      setActiveVotesApi((prev) =>
-        prev.map((v) => (v.voteId === vote.voteId ? updated : v))
-      );
+      setActiveVotesApi((prev) => prev.map((v) => (v.voteId === vote.voteId ? updated : v)));
     } catch (e) {
       console.error("투표 제출 실패:", e);
     }
@@ -124,24 +135,42 @@ const VoteList = () => {
                   <Menu className="w-5 h-5 text-white" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-32 bg-white border border-gray-200 shadow-lg rounded-lg z-[100]">
-                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer hover:bg-gray-50" onClick={() => navigate("/schedule")}>
+              <DropdownMenuContent
+                align="end"
+                className="w-32 bg-white border border-gray-200 shadow-lg rounded-lg z-[100]"
+              >
+                <DropdownMenuItem
+                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
+                  onClick={() => navigate("/schedule")}
+                >
                   <CalendarCheck className="w-4 h-4" style={{ color: "#6B7280" }} />
                   <span style={{ color: "#0F4C3A" }}>일정</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer hover:bg-gray-50" onClick={() => navigate("/vote-list")}>
+                <DropdownMenuItem
+                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
+                  onClick={() => navigate("/vote-list")}
+                >
                   <Vote className="w-4 h-4" style={{ color: "#6B7280" }} />
                   <span style={{ color: "#0F4C3A" }}>투표</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer hover:bg-gray-50" onClick={() => navigate("/study")}>
+                <DropdownMenuItem
+                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
+                  onClick={() => navigate("/study")}
+                >
                   <BookOpen className="w-4 h-4" style={{ color: "#6B7280" }} />
                   <span style={{ color: "#0F4C3A" }}>스터디</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer hover:bg-gray-50" onClick={() => navigate("/album")}>
+                <DropdownMenuItem
+                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
+                  onClick={() => navigate("/album")}
+                >
                   <Images className="w-4 h-4" style={{ color: "#6B7280" }} />
                   <span style={{ color: "#0F4C3A" }}>앨범</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer hover:bg-gray-50" onClick={() => navigate("/settings")}>
+                <DropdownMenuItem
+                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
+                  onClick={() => navigate("/settings")}
+                >
                   <Settings className="w-4 h-4" style={{ color: "#6B7280" }} />
                   <span style={{ color: "#0F4C3A" }}>설정</span>
                 </DropdownMenuItem>
@@ -154,34 +183,53 @@ const VoteList = () => {
       <main className="flex-1 px-4 py-6 pb-24">
         <div className="flex items-center gap-2 mb-2">
           <CheckSquare className="w-5 h-5" style={{ color: "#0F4C3A" }} />
-          <h1 className="text-xl font-bold" style={{ color: "#0F4C3A" }}>투표</h1>
+          <h1 className="text-xl font-bold" style={{ color: "#0F4C3A" }}>
+            투표
+          </h1>
         </div>
-        <p className="text-sm mb-4" style={{ color: "#6B7280" }}>의견을 공유하고 XP를 받으세요.</p>
+        <p className="text-sm mb-4" style={{ color: "#6B7280" }}>
+          의견을 공유하고 XP도 받아 보세요.
+        </p>
 
         <div className="flex rounded-full p-1 mb-6" style={{ backgroundColor: "#D1FAE5" }}>
           <button
             className="flex-1 py-2 px-4 rounded-full text-sm font-medium transition-colors"
-            style={{ backgroundColor: activeTab === "active" ? "#10B981" : "transparent", color: activeTab === "active" ? "#FFFFFF" : "#6B7280" }}
+            style={{
+              backgroundColor: activeTab === "active" ? "#10B981" : "transparent",
+              color: activeTab === "active" ? "#FFFFFF" : "#6B7280",
+            }}
             onClick={() => setActiveTab("active")}
           >
             진행 중
           </button>
           <button
             className="flex-1 py-2 px-4 rounded-full text-sm font-medium transition-colors"
-            style={{ backgroundColor: activeTab === "ended" ? "#10B981" : "transparent", color: activeTab === "ended" ? "#FFFFFF" : "#6B7280" }}
+            style={{
+              backgroundColor: activeTab === "ended" ? "#10B981" : "transparent",
+              color: activeTab === "ended" ? "#FFFFFF" : "#6B7280",
+            }}
             onClick={() => setActiveTab("ended")}
           >
             종료됨
           </button>
         </div>
 
-        {loading && <div className="text-sm mb-4" style={{ color: "#6B7280" }}>불러오는 중...</div>}
+        {loading && (
+          <div className="text-sm mb-4" style={{ color: "#6B7280" }}>
+            불러오는 중...
+          </div>
+        )}
 
         <div className="space-y-4 mb-6">
           {activeTab === "active" ? (
             activeVotesApi.length === 0 && !loading ? (
-              <div className="rounded-xl p-8 text-center" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
-                <p className="text-sm" style={{ color: "#6B7280" }}>진행 중인 투표가 없습니다</p>
+              <div
+                className="rounded-xl p-8 text-center"
+                style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}
+              >
+                <p className="text-sm" style={{ color: "#6B7280" }}>
+                  진행 중인 투표가 없습니다
+                </p>
               </div>
             ) : (
               activeVotesApi.map((vote) => {
@@ -189,10 +237,19 @@ const VoteList = () => {
                 const picked = selectedOptionIds[vote.voteId] ?? [];
 
                 return (
-                  <div key={vote.voteId} className="rounded-xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
+                  <div
+                    key={vote.voteId}
+                    className="rounded-xl p-4"
+                    style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}
+                  >
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-bold" style={{ color: "#0F4C3A" }}>{vote.title}</h3>
-                      <span className="px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1" style={{ backgroundColor: "#D1FAE5", color: "#10B981" }}>
+                      <h3 className="font-bold" style={{ color: "#0F4C3A" }}>
+                        {vote.title}
+                      </h3>
+                      <span
+                        className="px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1"
+                        style={{ backgroundColor: "#D1FAE5", color: "#10B981" }}
+                      >
                         <Sparkles className="w-3 h-3" /> +2XP
                       </span>
                     </div>
@@ -206,27 +263,47 @@ const VoteList = () => {
                           {isVoted ? (
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <span className="text-sm" style={{ color: "#0F4C3A" }}>{option.content}</span>
+                                <span className="text-sm" style={{ color: "#0F4C3A" }}>
+                                  {option.content}
+                                </span>
                                 <span className="text-sm" style={{ color: "#6B7280" }}>
                                   {option.count}표 ({getPercent(vote.options, option.count)}%)
                                 </span>
                               </div>
                               <div className="h-2 rounded-full" style={{ backgroundColor: "rgba(16, 185, 129, 0.2)" }}>
-                                <div className="h-full rounded-full transition-all" style={{ width: `${getPercent(vote.options, option.count)}%`, backgroundColor: "#10B981" }} />
+                                <div
+                                  className="h-full rounded-full transition-all"
+                                  style={{
+                                    width: `${getPercent(vote.options, option.count)}%`,
+                                    backgroundColor: "#10B981",
+                                  }}
+                                />
                               </div>
                             </div>
                           ) : (
                             <button
                               className="w-full flex items-center gap-3 p-3 rounded-xl border transition-colors"
-                              style={{ borderColor: picked.includes(option.voteOptionId) ? "#10B981" : "#E2E2E2", backgroundColor: picked.includes(option.voteOptionId) ? "rgba(16, 185, 129, 0.05)" : "#FFFFFF" }}
+                              style={{
+                                borderColor: picked.includes(option.voteOptionId) ? "#10B981" : "#E2E2E2",
+                                backgroundColor: picked.includes(option.voteOptionId)
+                                  ? "rgba(16, 185, 129, 0.05)"
+                                  : "#FFFFFF",
+                              }}
                               onClick={() => toggleOption(vote, option.voteOptionId)}
                             >
-                              <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: picked.includes(option.voteOptionId) ? "#10B981" : "#E2E2E2" }}>
+                              <div
+                                className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
+                                style={{
+                                  borderColor: picked.includes(option.voteOptionId) ? "#10B981" : "#E2E2E2",
+                                }}
+                              >
                                 {picked.includes(option.voteOptionId) && (
                                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#10B981" }} />
                                 )}
                               </div>
-                              <span className="text-sm" style={{ color: "#0F4C3A" }}>{option.content}</span>
+                              <span className="text-sm" style={{ color: "#0F4C3A" }}>
+                                {option.content}
+                              </span>
                             </button>
                           )}
                         </div>
@@ -235,8 +312,12 @@ const VoteList = () => {
 
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 text-sm" style={{ color: "#6B7280" }}>
-                        <span className="flex items-center gap-1"><Users className="w-4 h-4" /> -</span>
-                        <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> 진행중</span>
+                        <span className="flex items-center gap-1">
+                          <Users className="w-4 h-4" /> -
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" /> 진행중
+                        </span>
                       </div>
                       {isVoted ? (
                         <span className="flex items-center gap-1 text-sm font-medium" style={{ color: "#10B981" }}>
@@ -257,46 +338,71 @@ const VoteList = () => {
                 );
               })
             )
+          ) : endedVotesApi.length === 0 && !loading ? (
+            <div
+              className="rounded-xl p-8 text-center"
+              style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}
+            >
+              <p className="text-sm" style={{ color: "#6B7280" }}>
+                종료된 투표가 없습니다
+              </p>
+            </div>
           ) : (
-            endedVotesApi.length === 0 && !loading ? (
-              <div className="rounded-xl p-8 text-center" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
-                <p className="text-sm" style={{ color: "#6B7280" }}>종료된 투표가 없습니다</p>
-              </div>
-            ) : (
-              endedVotesApi.map((vote) => {
-                const sorted = [...vote.options].sort((a, b) => b.count - a.count);
-                const maxCount = sorted[0]?.count ?? 0;
+            endedVotesApi.map((vote) => {
+              const sorted = [...vote.options].sort((a, b) => b.count - a.count);
+              const maxCount = sorted[0]?.count ?? 0;
 
-                return (
-                  <div key={vote.voteId} className="rounded-xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
-                    <div className="flex items-start justify-between mb-1">
-                      <h3 className="font-bold" style={{ color: "#0F4C3A" }}>{vote.title}</h3>
-                      <span className="px-2 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: "#F1F5F9", color: "#6B7280" }}>종료</span>
-                    </div>
-                    <p className="text-sm mb-4" style={{ color: "#6B7280" }}>종료됨</p>
-                    <div className="space-y-3">
-                      {sorted.map((option, idx) => {
-                        const isWinner = maxCount > 0 && option.count === maxCount;
-                        return (
-                          <div key={option.voteOptionId}>
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm flex items-center gap-1" style={{ color: isWinner ? "#10B981" : "#6B7280" }}>
-                                {option.content}
-                                {isWinner && <Check className="w-4 h-4" style={{ color: "#10B981" }} />}
-                              </span>
-                              <span className="text-sm font-medium px-2 py-0.5 rounded" style={{ backgroundColor: isWinner ? "#D1FAE5" : "#F1F5F9", color: isWinner ? "#10B981" : "#6B7280" }}>
-                                {idx + 1}위 ({option.count}표)
-                              </span>
-                            </div>
-                            {isWinner && <div className="h-1.5 rounded-full" style={{ backgroundColor: "#10B981" }} />}
-                          </div>
-                        );
-                      })}
-                    </div>
+              return (
+                <div
+                  key={vote.voteId}
+                  className="rounded-xl p-4"
+                  style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}
+                >
+                  <div className="flex items-start justify-between mb-1">
+                    <h3 className="font-bold" style={{ color: "#0F4C3A" }}>
+                      {vote.title}
+                    </h3>
+                    <span
+                      className="px-2 py-1 rounded-full text-xs font-medium"
+                      style={{ backgroundColor: "#F1F5F9", color: "#6B7280" }}
+                    >
+                      완료
+                    </span>
                   </div>
-                );
-              })
-            )
+                  <p className="text-sm mb-4" style={{ color: "#6B7280" }}>
+                    종료된 투표 결과입니다.
+                  </p>
+                  <div className="space-y-3">
+                    {sorted.map((option, idx) => {
+                      const isWinner = maxCount > 0 && option.count === maxCount;
+                      return (
+                        <div key={option.voteOptionId}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span
+                              className="text-sm flex items-center gap-1"
+                              style={{ color: isWinner ? "#10B981" : "#6B7280" }}
+                            >
+                              {option.content}
+                              {isWinner && <Check className="w-4 h-4" style={{ color: "#10B981" }} />}
+                            </span>
+                            <span
+                              className="text-sm font-medium px-2 py-0.5 rounded"
+                              style={{
+                                backgroundColor: isWinner ? "#D1FAE5" : "#F1F5F9",
+                                color: isWinner ? "#10B981" : "#6B7280",
+                              }}
+                            >
+                              {idx + 1}위 ({option.count}표)
+                            </span>
+                          </div>
+                          {isWinner && <div className="h-1.5 rounded-full" style={{ backgroundColor: "#10B981" }} />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
 
@@ -309,13 +415,21 @@ const VoteList = () => {
               <button
                 key={i}
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium"
-                style={{ backgroundColor: page === i ? "#10B981" : "#FFFFFF", color: page === i ? "#FFFFFF" : "#6B7280", border: page === i ? "none" : "1px solid #D1FAE5" }}
+                style={{
+                  backgroundColor: page === i ? "#10B981" : "#FFFFFF",
+                  color: page === i ? "#FFFFFF" : "#6B7280",
+                  border: page === i ? "none" : "1px solid #D1FAE5",
+                }}
                 onClick={() => setPage(i)}
               >
                 {i + 1}
               </button>
             ))}
-            <button className="p-1" onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1}>
+            <button
+              className="p-1"
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page === totalPages - 1}
+            >
               <ChevronRight className="w-5 h-5" style={{ color: "#6B7280" }} />
             </button>
           </div>
@@ -323,32 +437,43 @@ const VoteList = () => {
 
         <div className="rounded-xl p-4" style={{ backgroundColor: "#D1FAE5" }}>
           <h3 className="font-semibold text-sm mb-2 flex items-center gap-1" style={{ color: "#10B981" }}>
-            💡 투표 안내
+            투표 안내
           </h3>
           <ul className="text-sm space-y-1" style={{ color: "#0F4C3A" }}>
-            <li>• 투표 참여 시 2 XP를 받아요</li>
-            <li>• 각 투표는 1회만 참여 가능합니다</li>
-            <li>• 마감 전까지 투표를 완료해주세요 🙂</li>
+            <li>각 투표에 참여하면 2 XP를 받을 수 있습니다.</li>
+            <li>한 투표에는 한 번만 참여할 수 있습니다.</li>
+            <li>마감 전까지 투표를 완료해 주세요.</li>
           </ul>
         </div>
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 flex items-center justify-around py-3 border-t" style={{ backgroundColor: "#FFFFFF", borderColor: "#D1FAE5" }}>
+      <nav
+        className="fixed bottom-0 left-0 right-0 flex items-center justify-around py-3 border-t"
+        style={{ backgroundColor: "#FFFFFF", borderColor: "#D1FAE5" }}
+      >
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/main")}>
           <Home className="w-5 h-5" style={{ color: "#6B7280" }} />
-          <span className="text-xs" style={{ color: "#6B7280" }}>홈</span>
+          <span className="text-xs" style={{ color: "#6B7280" }}>
+            홈
+          </span>
         </button>
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/schedule")}>
           <CalendarDays className="w-5 h-5" style={{ color: "#6B7280" }} />
-          <span className="text-xs" style={{ color: "#6B7280" }}>일정</span>
+          <span className="text-xs" style={{ color: "#6B7280" }}>
+            일정
+          </span>
         </button>
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/notice")}>
           <Megaphone className="w-5 h-5" style={{ color: "#10B981" }} />
-          <span className="text-xs font-medium" style={{ color: "#10B981" }}>공지</span>
+          <span className="text-xs font-medium" style={{ color: "#10B981" }}>
+            공지
+          </span>
         </button>
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/profile")}>
           <UserCircle className="w-5 h-5" style={{ color: "#6B7280" }} />
-          <span className="text-xs" style={{ color: "#6B7280" }}>마이</span>
+          <span className="text-xs" style={{ color: "#6B7280" }}>
+            마이
+          </span>
         </button>
       </nav>
     </div>

@@ -78,8 +78,8 @@ const Admin_Vote_Create = () => {
       });
 
       navigate("/admin/vote");
-    } catch (e: any) {
-      alert(e?.message ?? "투표 생성 실패");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "투표 생성 실패");
     } finally {
       setSubmitting(false);
     }

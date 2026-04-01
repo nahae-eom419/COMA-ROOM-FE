@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, User, Menu, Users, Sparkles, LayoutDashboard, ClipboardCheck, Megaphone, Check, X } from "lucide-react";
 import ComaLogo from "@/components/ComaLogo";
-import { useXP } from "@/contexts/XPContext";
-import { useLeaderboard, CURRENT_USER } from "@/contexts/LeaderboardContext";
+import { apiFetch } from "@/api/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -91,15 +90,15 @@ const initialXPRequests: XPRequest[] = [
 
 const Admin_XP_Grant = () => {
   const navigate = useNavigate();
-  const { addXP } = useXP();
-  const { updateMemberXP } = useLeaderboard();
   const [activeFilter, setActiveFilter] = useState<"all" | XPStatus>("all");
   const [xpRequests, setXpRequests] = useState<XPRequest[]>(initialXPRequests);
-  
+
   // Form state
-  const [memberName, setMemberName] = useState("");
+  const [studentId, setStudentId] = useState("");
   const [xpAmount, setXpAmount] = useState("0");
   const [reason, setReason] = useState("");
+  const [isGranting, setIsGranting] = useState(false);
+  const [grantMessage, setGrantMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const pendingCount = xpRequests.filter((r) => r.status === "pending").length;
   const approvedCount = xpRequests.filter((r) => r.status === "approved").length;
@@ -110,35 +109,55 @@ const Admin_XP_Grant = () => {
     return r.status === activeFilter;
   });
 
-  const handleApprove = (id: number) => {
-    setXpRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "approved" as XPStatus } : r))
-    );
-  };
-
-  const handleReject = (id: number) => {
-    setXpRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "rejected" as XPStatus } : r))
-    );
-  };
-
-  const handleGrant = () => {
-    const amount = parseInt(xpAmount);
-    if (!memberName || amount <= 0) return;
-
-    // 리더보드 Context에 반영
-    updateMemberXP(memberName, amount);
-
-    // 현재 로그인 사용자에게 지급하는 경우 XP Context에도 반영
-    if (memberName === CURRENT_USER) {
-      addXP(amount, reason || "관리자 XP 지급", "행사");
+  const handleApprove = async (id: number) => {
+    try {
+      await apiFetch(`/api/admin/member/ask-xp/status/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ approvalStatus: "APPROVED" }),
+      });
+      setXpRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: "approved" as XPStatus } : r)));
+    } catch {
+      setXpRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: "approved" as XPStatus } : r)));
     }
+  };
 
-    console.log("Granting XP:", { memberName, xpAmount, reason });
-    // Reset form
-    setMemberName("");
-    setXpAmount("0");
-    setReason("");
+  const handleReject = async (id: number) => {
+    try {
+      await apiFetch(`/api/admin/member/ask-xp/status/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ approvalStatus: "REJECTED" }),
+      });
+      setXpRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: "rejected" as XPStatus } : r)));
+    } catch {
+      setXpRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: "rejected" as XPStatus } : r)));
+    }
+  };
+
+  const handleGrant = async () => {
+    const amount = parseInt(xpAmount);
+    if (!studentId.trim() || amount <= 0) return;
+
+    setIsGranting(true);
+    setGrantMessage(null);
+    try {
+      await apiFetch("/api/admin/member/provide-xp", {
+        method: "POST",
+        body: JSON.stringify({
+          studentId: studentId.trim(),
+          provisionAmount: amount,
+          provisionReason: reason.trim() || "관리자 XP 지급",
+        }),
+      });
+      setGrantMessage({ type: "success", text: `${studentId} 에게 ${amount} XP가 지급되었습니다.` });
+      setStudentId("");
+      setXpAmount("0");
+      setReason("");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setGrantMessage({ type: "error", text: `지급 실패: ${msg}` });
+    } finally {
+      setIsGranting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -242,16 +261,27 @@ const Admin_XP_Grant = () => {
             </h2>
           </div>
 
-          {/* 부원 이름 */}
+          {/* 결과 메시지 */}
+          {grantMessage && (
+            <div className="mb-4 px-4 py-3 rounded-lg text-sm"
+              style={{
+                backgroundColor: grantMessage.type === "success" ? "#D1FAE5" : "#FFF1F2",
+                color: grantMessage.type === "success" ? "#0F4C3A" : "#C70036",
+              }}>
+              {grantMessage.text}
+            </div>
+          )}
+
+          {/* 학번 */}
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2" style={{ color: "#0F4C3A" }}>
-              부원 이름
+              학번
             </label>
             <input
               type="text"
-              placeholder="이름을 여기에 입력하세요."
-              value={memberName}
-              onChange={(e) => setMemberName(e.target.value)}
+              placeholder="학번을 입력하세요 (예: 202112345)"
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
               className="w-full px-4 py-3 rounded-lg text-sm"
               style={{
                 backgroundColor: "#F0FDF4",
@@ -302,11 +332,12 @@ const Admin_XP_Grant = () => {
           <div className="flex gap-3">
             <button
               onClick={handleGrant}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-medium"
+              disabled={isGranting || !studentId.trim() || parseInt(xpAmount) <= 0}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-medium disabled:opacity-50"
               style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
             >
               <Sparkles className="w-4 h-4" />
-              부여하기
+              {isGranting ? "지급 중..." : "부여하기"}
             </button>
             <button
               onClick={handleCancel}

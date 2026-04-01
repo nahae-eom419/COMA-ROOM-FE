@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Bell, 
-  User, 
-  Menu, 
-  Home, 
-  CalendarDays, 
-  Megaphone, 
+import {
+  Bell,
+  User,
+  Menu,
+  Home,
+  CalendarDays,
+  Megaphone,
   UserCircle,
   Star,
   Vote,
@@ -20,7 +20,7 @@ import {
   Settings,
   CalendarCheck,
   BookOpen,
-  Lightbulb
+  Lightbulb,
 } from "lucide-react";
 import ComaLogo from "@/components/ComaLogo";
 import {
@@ -42,7 +42,6 @@ interface NotificationItem {
 const Notifications = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"all" | "unread">("all");
-
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
       id: 1,
@@ -50,15 +49,15 @@ const Notifications = () => {
       title: "XP 획득!",
       description: "정기모임 #8 출석으로 3 XP를 받았어요",
       time: "10분 전",
-      isRead: false
+      isRead: false,
     },
     {
       id: 2,
       type: "vote",
       title: "새로운 투표",
-      description: "다음 세미나 주제 투표에 참여해주세요",
+      description: "다음 모임의 주제 투표에 참여해 주세요",
       time: "1시간 전",
-      isRead: false
+      isRead: false,
     },
     {
       id: 3,
@@ -66,118 +65,81 @@ const Notifications = () => {
       title: "다가오는 행사",
       description: "정기모임 #9가 내일 오후 7시에 있어요",
       time: "3시간 전",
-      isRead: false
+      isRead: false,
     },
     {
       id: 4,
       type: "album",
       title: "새 앨범",
-      description: "2025 신년 OT 앨범이 추가되었어요",
+      description: "2025 신입생 OT 앨범이 추가되었어요",
       time: "5시간 전",
-      isRead: true
+      isRead: true,
     },
     {
       id: 5,
       type: "manito",
       title: "마니또 메시지",
-      description: "마니또에게 새로운 메시지가 도착했어요",
+      description: "마니또에게서 새로운 메시지가 도착했어요",
       time: "1일 전",
-      isRead: true
+      isRead: true,
     },
     {
       id: 6,
       type: "achievement",
       title: "달성!",
-      description: "출석왕 뱃지를 획득했어요 🏆",
+      description: "출석왕 뱃지를 획득했어요",
       time: "2일 전",
-      isRead: true
+      isRead: true,
     },
     {
       id: 7,
       type: "attendance",
       title: "출석 체크",
-      description: "오늘 출석을 잊지 마세요!",
+      description: "오늘 출석을 아직 하지 않았어요",
       time: "3일 전",
-      isRead: true
-    }
+      isRead: true,
+    },
   ]);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-  const filteredNotifications = activeTab === "all" 
-    ? notifications 
-    : notifications.filter(n => !n.isRead);
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const filteredNotifications = activeTab === "all" ? notifications : notifications.filter((n) => !n.isRead);
 
   const getIconConfig = (type: string) => {
     switch (type) {
       case "xp":
-        return { 
-          icon: Star, 
-          bgColor: "#D1FAE5", 
-          iconColor: "#10B981" 
-        };
+        return { icon: Star, bgColor: "#D1FAE5", iconColor: "#10B981" };
       case "vote":
-        return { 
-          icon: Vote, 
-          bgColor: "#EFF6FF", 
-          iconColor: "#2B7FFF" 
-        };
+        return { icon: Vote, bgColor: "#EFF6FF", iconColor: "#2B7FFF" };
       case "event":
-        return { 
-          icon: Calendar, 
-          bgColor: "#F0FDF4", 
-          iconColor: "#10B981" 
-        };
+        return { icon: Calendar, bgColor: "#F0FDF4", iconColor: "#10B981" };
       case "album":
-        return { 
-          icon: Images, 
-          bgColor: "#EFF6FF", 
-          iconColor: "#2B7FFF" 
-        };
+        return { icon: Images, bgColor: "#EFF6FF", iconColor: "#2B7FFF" };
       case "manito":
-        return { 
-          icon: Heart, 
-          bgColor: "#FFF1F2", 
-          iconColor: "#FF2056" 
-        };
+        return { icon: Heart, bgColor: "#FFF1F2", iconColor: "#FF2056" };
       case "achievement":
-        return { 
-          icon: Trophy, 
-          bgColor: "#FFFBEB", 
-          iconColor: "#FE9A00" 
-        };
+        return { icon: Trophy, bgColor: "#FFFBEB", iconColor: "#FE9A00" };
       case "attendance":
-        return { 
-          icon: CheckCircle2, 
-          bgColor: "#D1FAE5", 
-          iconColor: "#10B981" 
-        };
+        return { icon: CheckCircle2, bgColor: "#D1FAE5", iconColor: "#10B981" };
       default:
-        return { 
-          icon: Bell, 
-          bgColor: "#D1FAE5", 
-          iconColor: "#10B981" 
-        };
+        return { icon: Bell, bgColor: "#D1FAE5", iconColor: "#10B981" };
     }
   };
 
   const markAsRead = (id: number) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, isRead: true } : n)
-    );
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
   };
 
   const removeNotification = (id: number) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F8FFFE' }}>
-      {/* Header */}
-      <header className="sticky top-0 z-50 px-4 py-3" style={{ backgroundColor: '#10B981' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F8FFFE" }}>
+      <header className="sticky top-0 z-50 px-4 py-3" style={{ backgroundColor: "#10B981" }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ComaLogo size="sm" />
@@ -185,7 +147,7 @@ const Notifications = () => {
           </div>
           <div className="flex items-center gap-4">
             <Bell className="w-5 h-5 text-white" />
-            <button onClick={() => navigate('/profile')}>
+            <button onClick={() => navigate("/profile")}>
               <User className="w-5 h-5 text-white" />
             </button>
             <DropdownMenu>
@@ -194,44 +156,26 @@ const Notifications = () => {
                   <Menu className="w-5 h-5 text-white" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent 
-                align="end" 
-                className="w-32 bg-white border border-gray-200 shadow-lg rounded-lg z-[100]"
-              >
-                <DropdownMenuItem 
-                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate('/schedule')}
-                >
-                  <CalendarCheck className="w-4 h-4" style={{ color: '#6B7280' }} />
-                  <span style={{ color: '#0F4C3A' }}>일정</span>
+              <DropdownMenuContent align="end" className="w-32 bg-white border border-gray-200 shadow-lg rounded-lg z-[100]">
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer hover:bg-gray-50" onClick={() => navigate("/schedule")}>
+                  <CalendarCheck className="w-4 h-4" style={{ color: "#6B7280" }} />
+                  <span style={{ color: "#0F4C3A" }}>일정</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate('/vote-list')}
-                >
-                  <Vote className="w-4 h-4" style={{ color: '#6B7280' }} />
-                  <span style={{ color: '#0F4C3A' }}>투표</span>
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer hover:bg-gray-50" onClick={() => navigate("/vote-list")}>
+                  <Vote className="w-4 h-4" style={{ color: "#6B7280" }} />
+                  <span style={{ color: "#0F4C3A" }}>투표</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate('/study')}
-                >
-                  <BookOpen className="w-4 h-4" style={{ color: '#6B7280' }} />
-                  <span style={{ color: '#0F4C3A' }}>스터디</span>
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer hover:bg-gray-50" onClick={() => navigate("/study")}>
+                  <BookOpen className="w-4 h-4" style={{ color: "#6B7280" }} />
+                  <span style={{ color: "#0F4C3A" }}>스터디</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate('/album')}
-                >
-                  <Images className="w-4 h-4" style={{ color: '#6B7280' }} />
-                  <span style={{ color: '#0F4C3A' }}>앨범</span>
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer hover:bg-gray-50" onClick={() => navigate("/album")}>
+                  <Images className="w-4 h-4" style={{ color: "#6B7280" }} />
+                  <span style={{ color: "#0F4C3A" }}>앨범</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate('/settings')}
-                >
-                  <Settings className="w-4 h-4" style={{ color: '#6B7280' }} />
-                  <span style={{ color: '#0F4C3A' }}>설정</span>
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer hover:bg-gray-50" onClick={() => navigate("/settings")}>
+                  <Settings className="w-4 h-4" style={{ color: "#6B7280" }} />
+                  <span style={{ color: "#0F4C3A" }}>설정</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -239,47 +183,39 @@ const Notifications = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 px-4 py-4 pb-24 space-y-4">
-        {/* Title Section */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bell className="w-5 h-5" style={{ color: '#0F4C3A' }} />
-            <h1 className="text-xl font-bold" style={{ color: '#0F4C3A' }}>알림</h1>
+            <Bell className="w-5 h-5" style={{ color: "#0F4C3A" }} />
+            <h1 className="text-xl font-bold" style={{ color: "#0F4C3A" }}>
+              알림
+            </h1>
           </div>
-          <button 
-            className="text-sm font-medium"
-            style={{ color: '#10B981' }}
-            onClick={markAllAsRead}
-          >
+          <button className="text-sm font-medium" style={{ color: "#10B981" }} onClick={markAllAsRead}>
             모두 읽음 처리
           </button>
         </div>
 
-        <p className="text-sm" style={{ color: '#6B7280' }}>
+        <p className="text-sm" style={{ color: "#6B7280" }}>
           읽지 않은 알림 {unreadCount}개
         </p>
 
-        {/* Tab Bar */}
-        <div 
-          className="flex rounded-full p-1"
-          style={{ backgroundColor: '#D1FAE5' }}
-        >
+        <div className="flex rounded-full p-1" style={{ backgroundColor: "#D1FAE5" }}>
           <button
-            className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-colors`}
-            style={{ 
-              backgroundColor: activeTab === "all" ? '#FFFFFF' : 'transparent',
-              color: activeTab === "all" ? '#0F4C3A' : '#6B7280'
+            className="flex-1 py-2 px-4 rounded-full text-sm font-medium transition-colors"
+            style={{
+              backgroundColor: activeTab === "all" ? "#FFFFFF" : "transparent",
+              color: activeTab === "all" ? "#0F4C3A" : "#6B7280",
             }}
             onClick={() => setActiveTab("all")}
           >
             전체 ({notifications.length})
           </button>
           <button
-            className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-colors`}
-            style={{ 
-              backgroundColor: activeTab === "unread" ? '#FFFFFF' : 'transparent',
-              color: activeTab === "unread" ? '#0F4C3A' : '#6B7280'
+            className="flex-1 py-2 px-4 rounded-full text-sm font-medium transition-colors"
+            style={{
+              backgroundColor: activeTab === "unread" ? "#FFFFFF" : "transparent",
+              color: activeTab === "unread" ? "#0F4C3A" : "#6B7280",
             }}
             onClick={() => setActiveTab("unread")}
           >
@@ -287,71 +223,62 @@ const Notifications = () => {
           </button>
         </div>
 
-        {/* Notifications List */}
         <div className="space-y-3">
           {filteredNotifications.map((notification) => {
             const iconConfig = getIconConfig(notification.type);
             const IconComponent = iconConfig.icon;
-            
+
             return (
               <div
                 key={notification.id}
                 className="rounded-2xl p-4 flex items-start gap-3 cursor-pointer transition-colors"
-                style={{ 
-                  backgroundColor: notification.isRead ? '#FFFFFF' : '#FFFBEB',
-                  border: `1px solid ${notification.isRead ? '#D1FAE5' : '#FEE685'}`
+                style={{
+                  backgroundColor: notification.isRead ? "#FFFFFF" : "#FFFBEB",
+                  border: `1px solid ${notification.isRead ? "#D1FAE5" : "#FEE685"}`,
                 }}
                 onClick={() => markAsRead(notification.id)}
               >
-                {/* Icon */}
-                <div 
-                  className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: iconConfig.bgColor }}
-                >
-                  <IconComponent 
-                    className="w-5 h-5" 
-                    style={{ color: iconConfig.iconColor }} 
-                  />
+                <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: iconConfig.bgColor }}>
+                  <IconComponent className="w-5 h-5" style={{ color: iconConfig.iconColor }} />
                 </div>
 
-                {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-sm" style={{ color: '#0F4C3A' }}>
+                    <h3 className="font-semibold text-sm" style={{ color: "#0F4C3A" }}>
                       {notification.title}
                     </h3>
-                    {!notification.isRead && (
-                      <span 
-                        className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: '#10B981' }}
-                      />
-                    )}
+                    {!notification.isRead && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: "#10B981" }} />}
                   </div>
-                  <p className="text-sm mt-1" style={{ color: '#6B7280' }}>
+                  <p className="text-sm mt-1" style={{ color: "#6B7280" }}>
                     {notification.description}
                   </p>
-                  <p className="text-xs mt-1" style={{ color: '#90A1B9' }}>
+                  <p className="text-xs mt-1" style={{ color: "#90A1B9" }}>
                     {notification.time}
                   </p>
                 </div>
 
-                {/* Actions */}
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {!notification.isRead && (
-                    <button 
+                    <button
                       className="w-8 h-8 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: '#D1FAE5' }}
-                      onClick={() => markAsRead(notification.id)}
+                      style={{ backgroundColor: "#D1FAE5" }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        markAsRead(notification.id);
+                      }}
                     >
-                      <Check className="w-4 h-4" style={{ color: '#10B981' }} />
+                      <Check className="w-4 h-4" style={{ color: "#10B981" }} />
                     </button>
                   )}
-                  <button 
+                  <button
                     className="w-8 h-8 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: '#F1F5F9' }}
-                    onClick={() => removeNotification(notification.id)}
+                    style={{ backgroundColor: "#F1F5F9" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeNotification(notification.id);
+                    }}
                   >
-                    <X className="w-4 h-4" style={{ color: '#6B7280' }} />
+                    <X className="w-4 h-4" style={{ color: "#6B7280" }} />
                   </button>
                 </div>
               </div>
@@ -359,58 +286,35 @@ const Notifications = () => {
           })}
         </div>
 
-        {/* Info Box */}
-        <div 
-          className="rounded-xl p-4"
-          style={{ backgroundColor: '#D1FAE5' }}
-        >
-          <h3 className="font-semibold text-sm mb-2 flex items-center gap-1" style={{ color: '#10B981' }}>
+        <div className="rounded-xl p-4" style={{ backgroundColor: "#D1FAE5" }}>
+          <h3 className="font-semibold text-sm mb-2 flex items-center gap-1" style={{ color: "#10B981" }}>
             <Lightbulb className="w-4 h-4" /> 알림 설정
           </h3>
-          <p className="text-sm mb-3" style={{ color: '#0F4C3A' }}>
-            설정 페이지에서 받고 싶은 알림을 관리할 수 있어요
+          <p className="text-sm mb-3" style={{ color: "#0F4C3A" }}>
+            설정 페이지에서 받고 싶은 알림을 관리할 수 있어요.
           </p>
-          <button 
-            className="w-full py-2 rounded-lg text-sm font-medium"
-            style={{ backgroundColor: '#FFFFFF', color: '#10B981' }}
-          >
+          <button className="w-full py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: "#FFFFFF", color: "#10B981" }}>
             알림 설정으로 이동
           </button>
         </div>
       </main>
 
-      {/* Bottom Navigation */}
-      <nav 
-        className="fixed bottom-0 left-0 right-0 flex items-center justify-around py-3 border-t"
-        style={{ backgroundColor: '#FFFFFF', borderColor: '#D1FAE5' }}
-      >
-        <button 
-          className="flex flex-col items-center gap-1"
-          onClick={() => navigate('/main')}
-        >
-          <Home className="w-5 h-5" style={{ color: '#6B7280' }} />
-          <span className="text-xs" style={{ color: '#6B7280' }}>홈</span>
+      <nav className="fixed bottom-0 left-0 right-0 flex items-center justify-around py-3 border-t" style={{ backgroundColor: "#FFFFFF", borderColor: "#D1FAE5" }}>
+        <button className="flex flex-col items-center gap-1" onClick={() => navigate("/main")}>
+          <Home className="w-5 h-5" style={{ color: "#6B7280" }} />
+          <span className="text-xs" style={{ color: "#6B7280" }}>홈</span>
         </button>
-        <button 
-          className="flex flex-col items-center gap-1"
-          onClick={() => navigate('/schedule')}
-        >
-          <CalendarDays className="w-5 h-5" style={{ color: '#6B7280' }} />
-          <span className="text-xs" style={{ color: '#6B7280' }}>일정</span>
+        <button className="flex flex-col items-center gap-1" onClick={() => navigate("/schedule")}>
+          <CalendarDays className="w-5 h-5" style={{ color: "#6B7280" }} />
+          <span className="text-xs" style={{ color: "#6B7280" }}>일정</span>
         </button>
-        <button 
-          className="flex flex-col items-center gap-1"
-          onClick={() => navigate('/notice')}
-        >
-          <Megaphone className="w-5 h-5" style={{ color: '#6B7280' }} />
-          <span className="text-xs" style={{ color: '#6B7280' }}>공지</span>
+        <button className="flex flex-col items-center gap-1" onClick={() => navigate("/notice")}>
+          <Megaphone className="w-5 h-5" style={{ color: "#6B7280" }} />
+          <span className="text-xs" style={{ color: "#6B7280" }}>공지</span>
         </button>
-        <button 
-          className="flex flex-col items-center gap-1" 
-          onClick={() => navigate('/profile')}
-        >
-          <UserCircle className="w-5 h-5" style={{ color: '#6B7280' }} />
-          <span className="text-xs" style={{ color: '#6B7280' }}>마이</span>
+        <button className="flex flex-col items-center gap-1" onClick={() => navigate("/profile")}>
+          <UserCircle className="w-5 h-5" style={{ color: "#6B7280" }} />
+          <span className="text-xs" style={{ color: "#6B7280" }}>마이</span>
         </button>
       </nav>
     </div>

@@ -1,7 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Calendar, Clock, Bell, User, Menu, Home, MessageSquare, CalendarCheck, Vote, BookOpen, Images, Settings } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  Clock,
+  Bell,
+  User,
+  Menu,
+  Home,
+  MessageSquare,
+  CalendarCheck,
+  Vote,
+  BookOpen,
+  Images,
+  Settings,
+  MapPin,
+  Loader2,
+} from "lucide-react";
 import ComaLogo from "@/components/ComaLogo";
+import { apiFetch } from "@/api/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,75 +27,99 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+interface EventResponse {
+  eventId: number;
+  title: string;
+  eventDate: string;
+  rewardXp: number;
+  location: string;
+  category: string;
+  hostNickname: string;
+}
+
+const CATEGORY_MAP: Record<string, { label: string; color: string }> = {
+  REGULAR_MEETING: { label: "정기모임", color: "bg-[#10B981]" },
+  STUDY: { label: "스터디", color: "bg-[#1447E6]" },
+  LAB: { label: "Lab", color: "bg-[#8200DB]" },
+  EVENT: { label: "행사", color: "bg-[#FE9A00]" },
+  STAFF: { label: "운영", color: "bg-[#6B7280]" },
+};
+
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 const Schedule = () => {
   const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 0, 23)); // January 23, 2026
-  const [selectedDate, setSelectedDate] = useState(23);
+  const today = new Date();
+  const [currentDate, setCurrentDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const [selectedDay, setSelectedDay] = useState(today.getDate());
+  const [events, setEvents] = useState<EventResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const daysOfWeek = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-  
-  // Generate calendar days for January 2026
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    apiFetch<EventResponse[]>(`/api/event/monthly?year=${year}&month=${month + 1}`)
+      .then(setEvents)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [year, month]);
+
   const firstDayOfMonth = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const daysInPrevMonth = new Date(year, month, 0).getDate();
-
   const calendarDays: { day: number; isCurrentMonth: boolean }[] = [];
-  
-  // Previous month days
+
   for (let i = firstDayOfMonth - 1; i >= 0; i--) {
     calendarDays.push({ day: daysInPrevMonth - i, isCurrentMonth: false });
   }
-  
-  // Current month days
   for (let i = 1; i <= daysInMonth; i++) {
     calendarDays.push({ day: i, isCurrentMonth: true });
   }
 
-  const upcomingEvents = [
-    {
-      id: 1,
-      title: "정기모임 #9",
-      type: "정기모임",
-      typeColor: "bg-[#10B981]",
-      date: "2025-01-27",
-      time: "오후 7:00"
-    },
-    {
-      id: 2,
-      title: "AI/ML 스터디",
-      type: "스터디",
-      typeColor: "bg-[#1447E6]",
-      date: "2025-01-24",
-      time: "오후 6:00"
-    },
-    {
-      id: 3,
-      title: "웹 개발 프로젝트",
-      type: "스터디",
-      typeColor: "bg-[#1447E6]",
-      date: "2025-01-26",
-      time: "오후 7:00"
-    }
-  ];
+  const eventDays = new Set(events.map((e) => new Date(e.eventDate).getDate()));
 
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
+  const selectedDayEvents = events.filter((e) => {
+    const d = new Date(e.eventDate);
+    return d.getFullYear() === year && d.getMonth() === month && d.getDate() === selectedDay;
+  });
 
-  const goToPrevMonth = () => {
-    setCurrentDate(new Date(year, month - 1, 1));
+  const upcomingEvents = events
+    .filter((e) => new Date(e.eventDate) >= new Date(today.getFullYear(), today.getMonth(), today.getDate()))
+    .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
+    .slice(0, 5);
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   };
 
-  const goToNextMonth = () => {
-    setCurrentDate(new Date(year, month + 1, 1));
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    const h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, "0");
+    const ampm = h >= 12 ? "오후" : "오전";
+    return `${ampm} ${h > 12 ? h - 12 : h || 12}:${m}`;
   };
 
   return (
     <div className="min-h-screen bg-[#F8FFFE]">
-      {/* Header */}
       <header className="sticky top-0 z-50 bg-[#10B981] px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -85,10 +127,10 @@ const Schedule = () => {
             <span className="text-white font-bold text-lg">COMA-ROOM</span>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/notifications')}>
+            <button onClick={() => navigate("/notifications")}>
               <Bell className="w-5 h-5 text-white" />
             </button>
-            <button onClick={() => navigate('/profile')}>
+            <button onClick={() => navigate("/profile")}>
               <User className="w-5 h-5 text-white" />
             </button>
             <DropdownMenu>
@@ -97,44 +139,44 @@ const Schedule = () => {
                   <Menu className="w-5 h-5 text-white" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent 
-                align="end" 
+              <DropdownMenuContent
+                align="end"
                 className="w-32 bg-white border border-gray-200 shadow-lg rounded-lg z-[100]"
               >
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate('/schedule')}
+                  onClick={() => navigate("/schedule")}
                 >
-                  <CalendarCheck className="w-4 h-4" style={{ color: '#6B7280' }} />
-                  <span style={{ color: '#0F4C3A' }}>일정</span>
+                  <CalendarCheck className="w-4 h-4" style={{ color: "#6B7280" }} />
+                  <span style={{ color: "#0F4C3A" }}>일정</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate('/vote-list')}
+                  onClick={() => navigate("/vote-list")}
                 >
-                  <Vote className="w-4 h-4" style={{ color: '#6B7280' }} />
-                  <span style={{ color: '#0F4C3A' }}>투표</span>
+                  <Vote className="w-4 h-4" style={{ color: "#6B7280" }} />
+                  <span style={{ color: "#0F4C3A" }}>투표</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate('/study')}
+                  onClick={() => navigate("/study")}
                 >
-                  <BookOpen className="w-4 h-4" style={{ color: '#6B7280' }} />
-                  <span style={{ color: '#0F4C3A' }}>스터디</span>
+                  <BookOpen className="w-4 h-4" style={{ color: "#6B7280" }} />
+                  <span style={{ color: "#0F4C3A" }}>스터디</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate('/album')}
+                  onClick={() => navigate("/album")}
                 >
-                  <Images className="w-4 h-4" style={{ color: '#6B7280' }} />
-                  <span style={{ color: '#0F4C3A' }}>앨범</span>
+                  <Images className="w-4 h-4" style={{ color: "#6B7280" }} />
+                  <span style={{ color: "#0F4C3A" }}>앨범</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate('/settings')}
+                  onClick={() => navigate("/settings")}
                 >
-                  <Settings className="w-4 h-4" style={{ color: '#6B7280' }} />
-                  <span style={{ color: '#0F4C3A' }}>설정</span>
+                  <Settings className="w-4 h-4" style={{ color: "#6B7280" }} />
+                  <span style={{ color: "#0F4C3A" }}>설정</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -142,127 +184,152 @@ const Schedule = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="px-4 py-6 pb-24">
-        {/* Page Title */}
         <div className="flex items-center gap-2 mb-2">
           <Calendar className="w-5 h-5 text-[#0F4C3A]" />
           <h1 className="text-xl font-bold text-[#0F4C3A]">일정</h1>
         </div>
-        <p className="text-[#6B7280] text-sm mb-6">동아리 일정을 한눈에 확인하세요</p>
+        <p className="text-[#6B7280] text-sm mb-6">동아리 일정을 한눈에 확인해 보세요.</p>
 
-        {/* Calendar */}
         <div className="bg-white rounded-2xl p-4 shadow-sm mb-6">
-          {/* Calendar Header */}
           <div className="flex items-center justify-between mb-4">
-            <button onClick={goToPrevMonth} className="p-1">
+            <button onClick={() => setCurrentDate(new Date(year, month - 1, 1))} className="p-1">
               <ChevronLeft className="w-5 h-5 text-[#6B7280]" />
             </button>
             <span className="font-semibold text-[#0F4C3A]">
               {monthNames[month]} {year}
             </span>
-            <button onClick={goToNextMonth} className="p-1">
+            <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))} className="p-1">
               <ChevronRight className="w-5 h-5 text-[#6B7280]" />
             </button>
           </div>
 
-          {/* Days of Week */}
           <div className="grid grid-cols-7 gap-1 mb-2">
-            {daysOfWeek.map((day) => (
-              <div key={day} className="text-center text-sm text-[#6B7280] py-2">
-                {day}
+            {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+              <div key={d} className="text-center text-sm text-[#6B7280] py-2">
+                {d}
               </div>
             ))}
           </div>
 
-          {/* Calendar Days */}
           <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map((item, index) => (
+            {calendarDays.map((item, idx) => (
               <button
-                key={index}
-                onClick={() => item.isCurrentMonth && setSelectedDate(item.day)}
-                className={`
-                  py-2 text-sm rounded-full transition-colors
+                key={idx}
+                onClick={() => item.isCurrentMonth && setSelectedDay(item.day)}
+                className={`relative py-2 text-sm rounded-full transition-colors flex flex-col items-center
                   ${!item.isCurrentMonth ? "text-[#D1D5DB]" : "text-[#0F4C3A]"}
-                  ${item.isCurrentMonth && item.day === selectedDate 
-                    ? "bg-[#10B981] text-white font-semibold" 
-                    : "hover:bg-[#D1FAE5]"
-                  }
+                  ${item.isCurrentMonth && item.day === selectedDay ? "bg-[#10B981] text-white font-semibold" : "hover:bg-[#D1FAE5]"}
                 `}
               >
                 {item.day}
+                {item.isCurrentMonth && eventDays.has(item.day) && item.day !== selectedDay && (
+                  <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[#10B981]" />
+                )}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Selected Date Events */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-[#0F4C3A]">1월 {selectedDate}일</h2>
-            <span className="text-sm text-[#10B981]">0개 일정</span>
+            <h2 className="font-bold text-[#0F4C3A]">
+              {month + 1}월 {selectedDay}일
+            </h2>
+            <span className="text-sm text-[#10B981]">{selectedDayEvents.length}개 일정</span>
           </div>
-          
-          <div className="bg-white rounded-2xl p-8 flex flex-col items-center justify-center">
-            <div className="w-16 h-16 mb-4 flex items-center justify-center">
-              <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="8" y="12" width="48" height="44" rx="4" stroke="#D1FAE5" strokeWidth="2" fill="none"/>
-                <path d="M8 24H56" stroke="#D1FAE5" strokeWidth="2"/>
-                <rect x="20" y="8" width="4" height="8" rx="2" fill="#D1FAE5"/>
-                <rect x="40" y="8" width="4" height="8" rx="2" fill="#D1FAE5"/>
-                <rect x="16" y="32" width="8" height="8" rx="1" fill="#D1FAE5"/>
-                <rect x="28" y="32" width="8" height="8" rx="1" fill="#D1FAE5"/>
-                <rect x="40" y="32" width="8" height="8" rx="1" fill="#D1FAE5"/>
-                <rect x="16" y="44" width="8" height="8" rx="1" fill="#D1FAE5"/>
-                <rect x="28" y="44" width="8" height="8" rx="1" fill="#D1FAE5"/>
-              </svg>
+
+          {loading ? (
+            <div className="bg-white rounded-2xl p-8 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-[#10B981]" />
             </div>
-            <p className="text-[#6B7280] text-sm">이 날짜에 예정된 일정이 없습니다.</p>
-          </div>
+          ) : selectedDayEvents.length === 0 ? (
+            <div className="bg-white rounded-2xl p-8 flex flex-col items-center justify-center">
+              <p className="text-[#6B7280] text-sm">선택한 날짜에는 등록된 일정이 없습니다.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {selectedDayEvents.map((event) => {
+                const cat = CATEGORY_MAP[event.category] ?? { label: event.category, color: "bg-[#6B7280]" };
+                return (
+                  <div key={event.eventId} className="bg-white rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-semibold text-[#0F4C3A]">{event.title}</span>
+                      <span className={`${cat.color} text-white text-xs px-2 py-0.5 rounded-full`}>
+                        {cat.label}
+                      </span>
+                    </div>
+                    <div className="space-y-1 text-sm text-[#6B7280]">
+                      <p className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5" />
+                        {formatTime(event.eventDate)}
+                      </p>
+                      {event.location && (
+                        <p className="flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5" />
+                          {event.location}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Upcoming Events */}
-        <div>
-          <h2 className="font-bold text-[#0F4C3A] mb-3">다가오는 일정</h2>
-          
-          <div className="space-y-3">
-            {upcomingEvents.map((event) => (
-              <div
-                key={event.id}
-                className="bg-white rounded-2xl p-4 flex items-center justify-between shadow-sm"
-              >
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-[#0F4C3A]">{event.title}</span>
-                    <span className={`${event.typeColor} text-white text-xs px-2 py-0.5 rounded-full`}>
-                      {event.type}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 text-[#6B7280] text-sm">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span>{event.date}</span>
+        {upcomingEvents.length > 0 && (
+          <div>
+            <h2 className="font-bold text-[#0F4C3A] mb-3">다가오는 일정</h2>
+            <div className="space-y-3">
+              {upcomingEvents.map((event) => {
+                const cat = CATEGORY_MAP[event.category] ?? { label: event.category, color: "bg-[#6B7280]" };
+                return (
+                  <div
+                    key={event.eventId}
+                    className="bg-white rounded-2xl p-4 flex items-center justify-between shadow-sm"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-[#0F4C3A]">{event.title}</span>
+                        <span className={`${cat.color} text-white text-xs px-2 py-0.5 rounded-full`}>
+                          {cat.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[#6B7280] text-sm">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {formatDate(event.eventDate)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" />
+                          {formatTime(event.eventDate)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>{event.time}</span>
-                    </div>
+                    <ChevronRight className="w-5 h-5 text-[#6B7280]" />
                   </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-[#6B7280]" />
-              </div>
-            ))}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
+
+        {error && (
+          <div
+            className="rounded-xl p-4 text-center"
+            style={{ backgroundColor: "#FFF1F2", border: "1px solid #FFE4E6" }}
+          >
+            <p className="text-sm" style={{ color: "#C70036" }}>
+              일정을 불러오지 못했습니다. {error}
+            </p>
+          </div>
+        )}
       </main>
 
-      {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#E5E7EB] px-4 py-2">
         <div className="flex items-center justify-around">
-          <button 
-            onClick={() => navigate("/main")}
-            className="flex flex-col items-center gap-1 py-2 px-4"
-          >
+          <button onClick={() => navigate("/main")} className="flex flex-col items-center gap-1 py-2 px-4">
             <Home className="w-5 h-5 text-[#6B7280]" />
             <span className="text-xs text-[#6B7280]">홈</span>
           </button>
@@ -270,11 +337,17 @@ const Schedule = () => {
             <Calendar className="w-5 h-5 text-[#10B981]" />
             <span className="text-xs text-[#10B981] font-medium">일정</span>
           </button>
-          <button className="flex flex-col items-center gap-1 py-2 px-4" onClick={() => navigate('/notice')}>
+          <button
+            className="flex flex-col items-center gap-1 py-2 px-4"
+            onClick={() => navigate("/notice")}
+          >
             <MessageSquare className="w-5 h-5 text-[#6B7280]" />
             <span className="text-xs text-[#6B7280]">공지</span>
           </button>
-          <button className="flex flex-col items-center gap-1 py-2 px-4" onClick={() => navigate('/profile')}>
+          <button
+            className="flex flex-col items-center gap-1 py-2 px-4"
+            onClick={() => navigate("/profile")}
+          >
             <User className="w-5 h-5 text-[#6B7280]" />
             <span className="text-xs text-[#6B7280]">마이</span>
           </button>
