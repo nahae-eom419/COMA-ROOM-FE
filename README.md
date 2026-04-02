@@ -1,4 +1,7 @@
-# Welcome to your Lovable project
+# 관리자 계정 202321970 password
+# 유저 계정 20261484 password
+# 일단 주요 기능들은 클로드한테 부탁해서 주석 달아놨고 너가 보고 수정할 부분 수정하면 되, 앨범이랑 스터디는 프,백 둘 다 구현 안돼있어
+# 공지사항 관리자 페이지에서 올리는거랑 유저 페이지에서 보이는거랑 일치하지 않아서 그거 일치시켜주면 됨
 # This repository is connected to Lovable for live preview and faster frontend debugging.
 
 
