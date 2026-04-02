@@ -1,3 +1,10 @@
+// ===================================================
+// 출석 기록 페이지
+// - 로그인한 사용자의 출석률, 출석/결석 횟수, 획득 XP, 순위 표시
+// - 전체 이벤트별 출석 여부 내역 목록 표시
+// - GET /api/member/main/attendance 로 데이터 조회
+// ===================================================
+
 import { useState, useEffect } from "react";
 import {
   Bell,
@@ -33,32 +40,37 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// 개별 이벤트 출석 내역 타입
 interface AttendanceHistoryItem {
   eventId: number;
   title: string;
   eventDate: string;
   location: string;
-  checkedInAt: string | null;
-  isAttended: boolean;
-  rewardXp: number;
+  checkedInAt: string | null; // 출석 시각 (결석이면 null)
+  isAttended: boolean;        // 출석 여부
+  rewardXp: number;           // 출석 시 획득 XP
 }
 
+// GET /api/member/main/attendance 응답 타입
 interface AttendanceData {
-  attendanceRate: number;
-  attendanceCount: number;
-  absenceCount: number;
-  totalEventCount: number;
-  totalEarnedXp: number;
-  attendanceRank: number;
+  attendanceRate: number;           // 출석률 (%)
+  attendanceCount: number;          // 출석 횟수
+  absenceCount: number;             // 결석 횟수
+  totalEventCount: number;          // 전체 이벤트 수
+  totalEarnedXp: number;            // 누적 획득 XP
+  attendanceRank: number;           // 출석 순위
   attendanceHistory: AttendanceHistoryItem[];
 }
 
 const Attendance = () => {
   const navigate = useNavigate();
+
+  // 서버에서 받아온 출석 데이터
   const [data, setData] = useState<AttendanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 마운트 시 출석 데이터 조회
   useEffect(() => {
     apiFetch<AttendanceData>("/api/member/main/attendance")
       .then(setData)
@@ -66,6 +78,7 @@ const Attendance = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  // null 안전 처리: 로딩 중에는 기본값 0 사용
   const attendanceRate = data?.attendanceRate ?? 0;
   const attended = data?.attendanceCount ?? 0;
   const absent = data?.absenceCount ?? 0;
@@ -129,12 +142,14 @@ const Attendance = () => {
           <p className="text-sm" style={{ color: "#6B7280" }}>나의 출석 현황을 확인해 보세요.</p>
         </div>
 
+        {/* 로딩 스피너 */}
         {loading && (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#10B981" }} />
           </div>
         )}
 
+        {/* 에러 메시지 */}
         {error && (
           <div className="rounded-xl p-4 text-center" style={{ backgroundColor: "#FFF1F2", border: "1px solid #FFE4E6" }}>
             <p className="text-sm" style={{ color: "#C70036" }}>데이터를 불러오지 못했습니다. {error}</p>
@@ -143,6 +158,7 @@ const Attendance = () => {
 
         {!loading && !error && (
           <>
+            {/* 출석률 카드 - 출석률 % + 프로그레스바 + 출석/결석/전체 횟수 */}
             <div className="rounded-2xl p-5 text-white" style={{ background: "linear-gradient(135deg, #10B981 0%, #0A6647 100%)" }}>
               <p className="text-sm opacity-90 mb-1">출석률</p>
               <div className="flex items-center justify-between mb-3">
@@ -170,6 +186,7 @@ const Attendance = () => {
               </div>
             </div>
 
+            {/* 획득 XP / 출석 순위 통계 카드 */}
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
                 <div className="flex items-center gap-1 text-xs mb-1" style={{ color: "#6B7280" }}>
@@ -185,9 +202,11 @@ const Attendance = () => {
               </div>
             </div>
 
+            {/* 출석 내역 목록 - 이벤트별로 출석/결석 표시 */}
             <section>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-bold" style={{ color: "#0F4C3A" }}>출석 내역</h2>
+                {/* QR 출석 인증 페이지로 이동 */}
                 <button
                   onClick={() => navigate("/attendance/verify")}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
@@ -207,6 +226,7 @@ const Attendance = () => {
                       <div className="flex items-start justify-between mb-2">
                         <h3 className="font-semibold" style={{ color: "#0F4C3A" }}>{item.title}</h3>
                         <div className="flex items-center gap-2">
+                          {/* 출석/결석 배지 */}
                           {item.isAttended ? (
                             <span className="px-2 py-1 rounded-full text-xs flex items-center gap-1" style={{ backgroundColor: "#D1FAE5", color: "#10B981" }}>
                               <CheckCircle className="w-3 h-3" /> 출석
@@ -216,6 +236,7 @@ const Attendance = () => {
                               <XCircle className="w-3 h-3" /> 결석
                             </span>
                           )}
+                          {/* 출석 시 획득 XP 표시 */}
                           {item.rewardXp > 0 && (
                             <span className="text-xs font-medium" style={{ color: "#10B981" }}>+{item.rewardXp} XP</span>
                           )}
@@ -238,6 +259,7 @@ const Attendance = () => {
               )}
             </section>
 
+            {/* 출석 안내 문구 */}
             <div className="rounded-xl p-4" style={{ backgroundColor: "#D1FAE5" }}>
               <h3 className="font-semibold text-sm mb-2 flex items-center gap-1" style={{ color: "#0F4C3A" }}>
                 출석 안내
@@ -252,6 +274,7 @@ const Attendance = () => {
         )}
       </main>
 
+      {/* 하단 네비게이션 바 */}
       <nav className="flex items-center justify-around py-3 border-t sticky bottom-0" style={{ backgroundColor: "#FFFFFF", borderColor: "#D1FAE5" }}>
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/main")}>
           <Home className="w-5 h-5" style={{ color: "#10B981" }} />

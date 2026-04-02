@@ -1,3 +1,11 @@
+// ===================================================
+// 공지사항 페이지
+// - 고정 공지(pinned)를 목록 상단에 우선 표시
+// - 우선순위(URGENT/IMPORTANT/NORMAL)에 따라 배지 색상 구분
+// - 공지 클릭 시 Dialog로 상세 내용 표시
+// - GET /api/notice?page=0 으로 데이터 조회
+// ===================================================
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -36,6 +44,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+// API 응답의 공지 항목 타입
 interface ApiNotice {
   noticeId: number;
   noticeTitle: string;
@@ -44,14 +53,16 @@ interface ApiNotice {
   noticePriority: "URGENT" | "NORMAL" | "IMPORTANT";
 }
 
+// GET /api/notice 응답 타입
 interface NoticeResponse {
   totalNoticeCount: number;
   pinnedNoticeCount: number;
   openedNoticeCount: number;
-  pinnedNoticeList: ApiNotice[];
-  openedNoticeList: ApiNotice[];
+  pinnedNoticeList: ApiNotice[];  // 고정 공지 목록
+  openedNoticeList: ApiNotice[];  // 일반 공지 목록
 }
 
+// 내부적으로 사용하는 공지 타입 (pinned 여부 포함)
 type NoticeItem = {
   noticeId: number;
   title: string;
@@ -61,12 +72,14 @@ type NoticeItem = {
   noticePriority: "URGENT" | "NORMAL" | "IMPORTANT";
 };
 
+// 우선순위별 배지 색상 및 레이블 정의
 const PRIORITY_STYLE: Record<NoticeItem["noticePriority"], { bg: string; text: string; label: string }> = {
-  URGENT: { bg: "#FEE685", text: "#BB4D00", label: "중요" },
-  NORMAL: { bg: "#D1FAE5", text: "#10B981", label: "일반" },
+  URGENT:    { bg: "#FEE685", text: "#BB4D00", label: "중요" },
+  NORMAL:    { bg: "#D1FAE5", text: "#10B981", label: "일반" },
   IMPORTANT: { bg: "#E9D4FF", text: "#8200DB", label: "안내" },
 };
 
+// API 응답 → 내부 NoticeItem 변환
 function mapNotice(notice: ApiNotice, pinned: boolean): NoticeItem {
   return {
     noticeId: notice.noticeId,
@@ -80,17 +93,24 @@ function mapNotice(notice: ApiNotice, pinned: boolean): NoticeItem {
 
 const NoticePage = () => {
   const navigate = useNavigate();
+
+  // 합쳐진 공지 목록 (고정 공지 먼저, 중복 제거)
   const [notices, setNotices] = useState<NoticeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 상세보기 Dialog에 표시할 선택된 공지
   const [selectedNotice, setSelectedNotice] = useState<NoticeItem | null>(null);
 
+  // 마운트 시 공지 목록 조회 및 가공
   useEffect(() => {
     apiFetch<NoticeResponse>("/api/notice?page=0")
       .then((res) => {
         const pinned = (res.pinnedNoticeList ?? []).map((notice) => mapNotice(notice, true));
         const opened = (res.openedNoticeList ?? []).map((notice) => mapNotice(notice, false));
+        // 고정 공지 ID 추출 (중복 방지용)
         const pinnedIds = new Set(pinned.map((notice) => notice.noticeId));
+        // 고정 공지를 앞에, 일반 공지(중복 제외)를 뒤에 합침
         const merged = [...pinned, ...opened.filter((notice) => !pinnedIds.has(notice.noticeId))];
         setNotices(merged);
       })
@@ -98,6 +118,7 @@ const NoticePage = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  // ISO 날짜 문자열에서 날짜 부분만 추출 (예: "2026-04-01T00:00:00" → "2026-04-01")
   const formatDate = (iso: string) => iso?.split("T")[0] ?? iso;
 
   return (
@@ -157,6 +178,7 @@ const NoticePage = () => {
           <p className="text-sm" style={{ color: "#6B7280" }}>동아리 소식과 공지를 확인하세요</p>
         </div>
 
+        {/* 동아리방 위치 및 운영 시간 안내 카드 (정적 정보) */}
         <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg, #1D293D 0%, #0F172B 100%)" }}>
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(255,255,255,0.2)" }}>
@@ -190,18 +212,21 @@ const NoticePage = () => {
           </div>
         </div>
 
+        {/* 공지 목록 섹션 */}
         <section>
           <div className="flex items-center gap-2 mb-3">
             <Megaphone className="w-4 h-4" style={{ color: "#0F4C3A" }} />
             <h2 className="font-bold" style={{ color: "#0F4C3A" }}>최근 공지</h2>
           </div>
 
+          {/* 로딩 스피너 */}
           {loading && (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#10B981" }} />
             </div>
           )}
 
+          {/* 에러 메시지 */}
           {error && (
             <div className="rounded-xl p-4 text-center" style={{ backgroundColor: "#FFF1F2", border: "1px solid #FFE4E6" }}>
               <p className="text-sm" style={{ color: "#C70036" }}>공지를 불러오지 못했습니다. {error}</p>
@@ -215,6 +240,7 @@ const NoticePage = () => {
                   <p className="text-sm" style={{ color: "#6B7280" }}>등록된 공지사항이 없습니다.</p>
                 </div>
               ) : (
+                // 공지 카드 - 클릭 시 selectedNotice 설정 → Dialog 열림
                 notices.map((notice) => {
                   const style = PRIORITY_STYLE[notice.noticePriority];
                   return (
@@ -226,13 +252,16 @@ const NoticePage = () => {
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
+                          {/* 고정 공지 핀 아이콘 */}
                           {notice.pinned && <Pin className="w-4 h-4" style={{ color: "#FE9A00" }} />}
                           <h3 className="font-semibold text-sm" style={{ color: "#0F4C3A" }}>{notice.title}</h3>
                         </div>
+                        {/* 우선순위 배지 */}
                         <span className="px-2 py-1 rounded text-xs font-medium flex-shrink-0" style={{ backgroundColor: style.bg, color: style.text }}>
                           {style.label}
                         </span>
                       </div>
+                      {/* 내용 미리보기 (최대 2줄) */}
                       <p className="text-sm mb-3 line-clamp-2" style={{ color: "#6B7280" }}>{notice.content}</p>
                       <div className="flex items-center justify-between text-xs" style={{ color: "#90A1B9" }}>
                         <span>{notice.pinned ? "고정 공지" : "일반 공지"}</span>
@@ -249,6 +278,7 @@ const NoticePage = () => {
           )}
         </section>
 
+        {/* 공지사항 이용 안내 */}
         <div className="rounded-xl p-4" style={{ backgroundColor: "#D1FAE5" }}>
           <h3 className="font-semibold text-sm mb-2 flex items-center gap-1" style={{ color: "#10B981" }}>
             <Lightbulb className="w-4 h-4" /> 공지사항 안내
@@ -261,6 +291,7 @@ const NoticePage = () => {
         </div>
       </main>
 
+      {/* 공지 상세 Dialog - 공지 클릭 시 열림, 바깥 클릭 시 닫힘 */}
       <Dialog open={!!selectedNotice} onOpenChange={() => setSelectedNotice(null)}>
         <DialogContent className="max-w-[90%] sm:max-w-md rounded-2xl" style={{ backgroundColor: "#FFFFFF" }}>
           {selectedNotice && (
@@ -296,6 +327,7 @@ const NoticePage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* 하단 네비게이션 바 */}
       <nav className="fixed bottom-0 left-0 right-0 flex items-center justify-around py-3 border-t" style={{ backgroundColor: "#FFFFFF", borderColor: "#D1FAE5" }}>
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/main")}>
           <Home className="w-5 h-5" style={{ color: "#6B7280" }} />

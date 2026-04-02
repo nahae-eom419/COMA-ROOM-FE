@@ -56,6 +56,24 @@ interface XpHistoryResponse {
   activities: XpActivityItem[];
 }
 
+interface RecentActivityLog {
+  id: number;
+  userName: string;
+  studentId: string;
+  description: string;
+  detail: string;
+  dateTime: string;
+  grantedXp: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+}
+
+interface XpMainResponse {
+  pendingCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  recentActivityLogs: RecentActivityLog[];
+}
+
 const ACTIVITY_TYPE_LABEL: Record<XpActivityItem["activityType"], string> = {
   REGULAR_MEETING: "출석",
   LAB: "출석",
@@ -91,6 +109,7 @@ const XPDetails = () => {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [data, setData] = useState<XpHistoryResponse | null>(null);
+  const [mainData, setMainData] = useState<XpMainResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,8 +118,12 @@ const XPDetails = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await apiFetch<XpHistoryResponse>(`/api/member/xp-history?page=${currentPage}`);
-        setData(res);
+        const [history, main] = await Promise.all([
+          apiFetch<XpHistoryResponse>(`/api/member/xp-history?page=${currentPage}`),
+          apiFetch<XpMainResponse>("/api/member/main/xp"),
+        ]);
+        setData(history);
+        setMainData(main);
       } catch (e) {
         setError(e instanceof Error ? e.message : "데이터를 불러오지 못했습니다.");
       } finally {
@@ -170,6 +193,23 @@ const XPDetails = () => {
               </div>
             </div>
 
+            {mainData && (
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-xl p-4 text-center" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
+                  <p className="text-2xl font-bold" style={{ color: "#FE9A00" }}>{mainData.pendingCount}</p>
+                  <p className="text-xs" style={{ color: "#6B7280" }}>대기 중</p>
+                </div>
+                <div className="rounded-xl p-4 text-center" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
+                  <p className="text-2xl font-bold" style={{ color: "#10B981" }}>{mainData.approvedCount}</p>
+                  <p className="text-xs" style={{ color: "#6B7280" }}>승인됨</p>
+                </div>
+                <div className="rounded-xl p-4 text-center" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
+                  <p className="text-2xl font-bold" style={{ color: "#E7000B" }}>{mainData.rejectedCount}</p>
+                  <p className="text-xs" style={{ color: "#6B7280" }}>반려됨</p>
+                </div>
+              </div>
+            )}
+
             <section>
               <h2 className="font-bold mb-3" style={{ color: "#0F4C3A" }}>XP 분석</h2>
               <div className="rounded-xl p-4 space-y-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
@@ -205,6 +245,32 @@ const XPDetails = () => {
                 })}
               </div>
             </section>
+
+            {mainData && mainData.recentActivityLogs.length > 0 && (
+              <section>
+                <h2 className="font-bold mb-3" style={{ color: "#0F4C3A" }}>최근 XP 요청 처리</h2>
+                <div className="space-y-3">
+                  {mainData.recentActivityLogs.slice(0, 5).map((log) => {
+                    const { date, time } = formatDate(log.dateTime);
+                    return (
+                      <div key={log.id} className="rounded-xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <div>
+                            <p className="font-semibold" style={{ color: "#0F4C3A" }}>{log.description}</p>
+                            <p className="text-xs" style={{ color: "#6B7280" }}>{log.detail}</p>
+                          </div>
+                          <span className="text-sm font-bold" style={{ color: "#10B981" }}>+{log.grantedXp} XP</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs" style={{ color: "#6B7280" }}>
+                          <span>{date} {time}</span>
+                          <span>{log.status}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             {data.totalPages > 1 && (
               <div className="flex flex-col items-center gap-2">

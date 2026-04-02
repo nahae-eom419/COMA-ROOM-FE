@@ -1,3 +1,12 @@
+// ===================================================
+// 투표 목록 페이지
+// - "진행 중" / "종료됨" 탭으로 투표 구분
+// - 진행 중 투표: 옵션 선택 후 투표 제출 가능 (단일/복수 선택)
+// - 종료된 투표: 득표 결과 및 순위 표시
+// - GET /api/vote/votes?status=IN_PROGRESS|CLOSED
+// - POST /api/vote/votes/{voteId}/participate
+// ===================================================
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -31,31 +40,45 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { apiFetch } from "@/api/client";
 
+// 투표 옵션 (각 옵션의 ID, 내용, 득표수)
 type ApiVoteOption = {
   voteOptionId: number;
   content: string;
   count: number;
 };
 
+// 투표 항목 타입
 type ApiVote = {
   voteId: number;
   title: string;
   status: "IN_PROGRESS" | "CLOSED" | "COMPLETED";
-  isMultiple: boolean;
+  isMultiple: boolean; // true: 복수 선택 가능
   options: ApiVoteOption[];
 };
 
 const VoteList = () => {
   const navigate = useNavigate();
+
+  // 현재 선택된 탭 (진행 중 / 종료됨)
   const [activeTab, setActiveTab] = useState<"active" | "ended">("active");
+
+  // 서버에서 받아온 투표 목록
   const [activeVotesApi, setActiveVotesApi] = useState<ApiVote[]>([]);
   const [endedVotesApi, setEndedVotesApi] = useState<ApiVote[]>([]);
+
   const [loading, setLoading] = useState(false);
+
+  // 투표별 선택된 옵션 ID 목록 { voteId: [optionId, ...] }
   const [selectedOptionIds, setSelectedOptionIds] = useState<Record<number, number[]>>({});
+
+  // 이미 투표 완료한 voteId 목록 (클라이언트 측 관리)
   const [votedIds, setVotedIds] = useState<number[]>([]);
+
+  // 현재 페이지 번호 (0-indexed)
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
+  // 진행 중/종료 투표를 동시에 조회
   const fetchVotes = async () => {
     setLoading(true);
     try {
@@ -74,16 +97,21 @@ const VoteList = () => {
     }
   };
 
+  // 페이지 변경 시 재조회
   useEffect(() => {
     fetchVotes();
   }, [page]);
 
+  // 특정 옵션의 득표율 계산 (%)
   const getPercent = (options: ApiVoteOption[], count: number) => {
     const total = options.reduce((sum, o) => sum + o.count, 0);
     if (total === 0) return 0;
     return Math.round((count / total) * 100);
   };
 
+  // 옵션 선택/해제 토글
+  // 단일 투표(isMultiple=false): 항상 1개만 유지
+  // 복수 투표(isMultiple=true): 이미 선택된 경우 해제, 아닌 경우 추가
   const toggleOption = (vote: ApiVote, optionId: number) => {
     setSelectedOptionIds((prev) => {
       const current = prev[vote.voteId] ?? [];
@@ -96,6 +124,9 @@ const VoteList = () => {
     });
   };
 
+  // 투표 제출
+  // POST /api/vote/votes/{voteId}/participate
+  // 성공 시: votedIds에 추가, 서버 응답으로 해당 투표 결과 업데이트
   const handleVoteSubmit = async (vote: ApiVote) => {
     const picked = selectedOptionIds[vote.voteId] ?? [];
     if (picked.length === 0) return;
@@ -106,8 +137,11 @@ const VoteList = () => {
         body: JSON.stringify({ voteOptionId: picked }),
       });
 
+      // 로컬 상태에 투표 완료 기록
       setVotedIds((prev) => (prev.includes(vote.voteId) ? prev : [...prev, vote.voteId]));
+      // 선택 초기화
       setSelectedOptionIds((prev) => ({ ...prev, [vote.voteId]: [] }));
+      // 서버 응답 데이터로 투표 결과 업데이트
       setActiveVotesApi((prev) => prev.map((v) => (v.voteId === vote.voteId ? updated : v)));
     } catch (e) {
       console.error("투표 제출 실패:", e);
@@ -191,6 +225,7 @@ const VoteList = () => {
           의견을 공유하고 XP도 받아 보세요.
         </p>
 
+        {/* 탭 전환 - 진행 중 / 종료됨 */}
         <div className="flex rounded-full p-1 mb-6" style={{ backgroundColor: "#D1FAE5" }}>
           <button
             className="flex-1 py-2 px-4 rounded-full text-sm font-medium transition-colors"
@@ -232,9 +267,10 @@ const VoteList = () => {
                 </p>
               </div>
             ) : (
+              // 진행 중 투표 카드 목록
               activeVotesApi.map((vote) => {
-                const isVoted = votedIds.includes(vote.voteId);
-                const picked = selectedOptionIds[vote.voteId] ?? [];
+                const isVoted = votedIds.includes(vote.voteId); // 이미 투표했는지
+                const picked = selectedOptionIds[vote.voteId] ?? []; // 현재 선택된 옵션들
 
                 return (
                   <div
@@ -257,10 +293,12 @@ const VoteList = () => {
                       {vote.isMultiple ? "복수 선택 가능" : "단일 선택"}
                     </p>
 
+                    {/* 옵션 목록 */}
                     <div className="space-y-3 mb-4">
                       {vote.options.map((option) => (
                         <div key={option.voteOptionId}>
                           {isVoted ? (
+                            // 투표 완료 후: 득표율 바 표시
                             <div>
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-sm" style={{ color: "#0F4C3A" }}>
@@ -281,6 +319,7 @@ const VoteList = () => {
                               </div>
                             </div>
                           ) : (
+                            // 투표 전: 선택 버튼으로 표시
                             <button
                               className="w-full flex items-center gap-3 p-3 rounded-xl border transition-colors"
                               style={{
@@ -291,6 +330,7 @@ const VoteList = () => {
                               }}
                               onClick={() => toggleOption(vote, option.voteOptionId)}
                             >
+                              {/* 선택 여부를 나타내는 원형 인디케이터 */}
                               <div
                                 className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
                                 style={{
@@ -320,10 +360,12 @@ const VoteList = () => {
                         </span>
                       </div>
                       {isVoted ? (
+                        // 투표 완료 상태 표시
                         <span className="flex items-center gap-1 text-sm font-medium" style={{ color: "#10B981" }}>
                           <CheckCircle className="w-4 h-4" /> 투표 완료
                         </span>
                       ) : (
+                        // 투표하기 버튼 - 옵션 미선택 시 비활성화
                         <button
                           className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
                           style={{ backgroundColor: "#0F4C3A", color: "#FFFFFF" }}
@@ -348,6 +390,7 @@ const VoteList = () => {
               </p>
             </div>
           ) : (
+            // 종료된 투표 카드 - 득표 순서로 정렬하여 결과 표시
             endedVotesApi.map((vote) => {
               const sorted = [...vote.options].sort((a, b) => b.count - a.count);
               const maxCount = sorted[0]?.count ?? 0;
@@ -372,6 +415,7 @@ const VoteList = () => {
                   <p className="text-sm mb-4" style={{ color: "#6B7280" }}>
                     종료된 투표 결과입니다.
                   </p>
+                  {/* 득표 결과 - 1위 항목은 초록색 강조 */}
                   <div className="space-y-3">
                     {sorted.map((option, idx) => {
                       const isWinner = maxCount > 0 && option.count === maxCount;
@@ -406,6 +450,7 @@ const VoteList = () => {
           )}
         </div>
 
+        {/* 종료된 투표 페이지네이션 */}
         {activeTab === "ended" && totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 mb-4">
             <button className="p-1" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
@@ -435,6 +480,7 @@ const VoteList = () => {
           </div>
         )}
 
+        {/* 투표 이용 안내 */}
         <div className="rounded-xl p-4" style={{ backgroundColor: "#D1FAE5" }}>
           <h3 className="font-semibold text-sm mb-2 flex items-center gap-1" style={{ color: "#10B981" }}>
             투표 안내
@@ -447,33 +493,26 @@ const VoteList = () => {
         </div>
       </main>
 
+      {/* 하단 네비게이션 바 */}
       <nav
         className="fixed bottom-0 left-0 right-0 flex items-center justify-around py-3 border-t"
         style={{ backgroundColor: "#FFFFFF", borderColor: "#D1FAE5" }}
       >
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/main")}>
           <Home className="w-5 h-5" style={{ color: "#6B7280" }} />
-          <span className="text-xs" style={{ color: "#6B7280" }}>
-            홈
-          </span>
+          <span className="text-xs" style={{ color: "#6B7280" }}>홈</span>
         </button>
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/schedule")}>
           <CalendarDays className="w-5 h-5" style={{ color: "#6B7280" }} />
-          <span className="text-xs" style={{ color: "#6B7280" }}>
-            일정
-          </span>
+          <span className="text-xs" style={{ color: "#6B7280" }}>일정</span>
         </button>
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/notice")}>
           <Megaphone className="w-5 h-5" style={{ color: "#10B981" }} />
-          <span className="text-xs font-medium" style={{ color: "#10B981" }}>
-            공지
-          </span>
+          <span className="text-xs font-medium" style={{ color: "#10B981" }}>공지</span>
         </button>
         <button className="flex flex-col items-center gap-1" onClick={() => navigate("/profile")}>
           <UserCircle className="w-5 h-5" style={{ color: "#6B7280" }} />
-          <span className="text-xs" style={{ color: "#6B7280" }}>
-            마이
-          </span>
+          <span className="text-xs" style={{ color: "#6B7280" }}>마이</span>
         </button>
       </nav>
     </div>

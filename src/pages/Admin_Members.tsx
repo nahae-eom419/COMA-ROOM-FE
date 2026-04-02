@@ -74,6 +74,8 @@ const Admin_Members = () => {
   const [xpMember, setXPMember] = useState<Member | null>(null);
   const [xpAmount, setXPAmount] = useState(0);
   const [xpReason, setXPReason] = useState("");
+  const [xpSubmitting, setXpSubmitting] = useState(false);
+  const [xpResult, setXpResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   // Delete Dialog State
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -139,13 +141,47 @@ const Admin_Members = () => {
     setXPMember(member);
     setXPAmount(0);
     setXPReason("");
+    setXpResult(null);
     setIsXPModalOpen(true);
   };
 
-  const handleXPSave = () => {
+  const handleXPSave = async () => {
     if (!xpMember || xpAmount === 0) return;
-    navigate("/admin/xp/grant");
-    setIsXPModalOpen(false);
+
+    setXpSubmitting(true);
+    setXpResult(null);
+
+    try {
+      await apiFetch("/api/admin/member/provide-xp", {
+        method: "POST",
+        body: JSON.stringify({
+          studentId: xpMember.studentId,
+          provisionAmount: xpAmount,
+          provisionReason: xpReason.trim() || "관리자 회원 목록에서 직접 조정",
+        }),
+      });
+
+      setMembers((prev) =>
+        prev.map((member) =>
+          member.id === xpMember.id
+            ? { ...member, xp: member.xp + xpAmount }
+            : member
+        )
+      );
+
+      setXpResult({ ok: true, message: "XP가 정상적으로 반영되었습니다." });
+      setTimeout(() => {
+        setIsXPModalOpen(false);
+        setXpSubmitting(false);
+        setXpResult(null);
+      }, 700);
+    } catch (e) {
+      setXpResult({
+        ok: false,
+        message: e instanceof Error ? e.message : "XP 반영에 실패했습니다.",
+      });
+      setXpSubmitting(false);
+    }
   };
 
   // Delete handlers (로컬 상태만 변경 - 백엔드 삭제 API 미지원)
@@ -171,10 +207,10 @@ const Admin_Members = () => {
             <span className="text-white font-bold text-lg">COMA-ROOM</span>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/notifications')}>
+            <button onClick={() => navigate('/admin/notice')}>
               <Bell className="w-5 h-5 text-white" />
             </button>
-            <button onClick={() => navigate('/profile')}>
+            <button onClick={() => navigate('/admin')}>
               <User className="w-5 h-5 text-white" />
             </button>
             <DropdownMenu>
@@ -189,7 +225,7 @@ const Admin_Members = () => {
               >
                 <DropdownMenuItem 
                   className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/admin')}
                 >
                   <User className="w-4 h-4" style={{ color: '#6B7280' }} />
                   <span style={{ color: '#0F4C3A' }}>로그아웃</span>

@@ -32,6 +32,7 @@ import Admin_Attendance from "./pages/Admin_Attendance";
 import Admin_Vote from "./pages/Admin_Vote";
 import Admin_Vote_Create from "./pages/Admin_Vote_Create";
 import Admin_Notice from "./pages/Admin_Notice";
+import Admin_Leaderboard from "./pages/Admin_Leaderboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ const App = () => (
               <Route path="/admin/vote" element={<Admin_Vote />} />
               <Route path="/admin/vote/create" element={<Admin_Vote_Create />} />
               <Route path="/admin/notice" element={<Admin_Notice />} />
+              <Route path="/admin/leaderboard" element={<Admin_Leaderboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
                 </Routes>

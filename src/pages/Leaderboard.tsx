@@ -31,14 +31,18 @@ import {
 interface RankingItem {
   rank: number;
   name: string;
-  anonymousName: string;
   major: string;
-  currentXp: number;
-  isCurrentUser: boolean;
+  xp: number;
+  isMe: boolean;
 }
 
 interface LeaderboardResponse {
-  myRanking: RankingItem;
+  myRanking: {
+    rank: number;
+    name: string;
+    major: string;
+    xp: number;
+  };
   topThreeRankings: RankingItem[];
   allRankings: RankingItem[];
 }
@@ -162,7 +166,7 @@ const Leaderboard = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-3xl font-bold" style={{ color: "#10B981" }}>{myRanking.currentXp}</p>
+                    <p className="text-3xl font-bold" style={{ color: "#10B981" }}>{myRanking.xp}</p>
                     <p className="text-xs" style={{ color: "#6B7280" }}>XP</p>
                   </div>
                 </div>
@@ -175,23 +179,23 @@ const Leaderboard = () => {
                   <div className="flex flex-col items-center">
                     <div className="w-20 h-24 rounded-t-lg flex flex-col items-center justify-center" style={{ backgroundColor: "#99A1AF" }}>
                       <span className="text-white font-bold text-lg">2nd</span>
-                      <span className="text-white text-sm font-medium">{top3[1].anonymousName}</span>
-                      <span className="text-white text-xs opacity-80">{top3[1].currentXp} XP</span>
+                      <span className="text-white text-sm font-medium">{top3[1].name}</span>
+                      <span className="text-white text-xs opacity-80">{top3[1].xp} XP</span>
                     </div>
                   </div>
                   <div className="flex flex-col items-center">
                     <Crown className="w-6 h-6 mb-1" style={{ color: "#F0B100" }} />
                     <div className="w-24 h-32 rounded-t-lg flex flex-col items-center justify-center" style={{ backgroundColor: "#F0B100" }}>
                       <span className="text-white font-bold text-xl">1st</span>
-                      <span className="text-white text-sm font-medium">{top3[0].anonymousName}</span>
-                      <span className="text-white text-xs opacity-80">{top3[0].currentXp} XP</span>
+                      <span className="text-white text-sm font-medium">{top3[0].name}</span>
+                      <span className="text-white text-xs opacity-80">{top3[0].xp} XP</span>
                     </div>
                   </div>
                   <div className="flex flex-col items-center">
                     <div className="w-20 h-20 rounded-t-lg flex flex-col items-center justify-center" style={{ backgroundColor: "#BB4D00" }}>
                       <span className="text-white font-bold text-lg">3rd</span>
-                      <span className="text-white text-sm font-medium">{top3[2].anonymousName}</span>
-                      <span className="text-white text-xs opacity-80">{top3[2].currentXp} XP</span>
+                      <span className="text-white text-sm font-medium">{top3[2].name}</span>
+                      <span className="text-white text-xs opacity-80">{top3[2].xp} XP</span>
                     </div>
                   </div>
                 </div>
@@ -206,8 +210,8 @@ const Leaderboard = () => {
                     key={item.rank}
                     className="rounded-xl p-4 flex items-center justify-between"
                     style={{
-                      backgroundColor: item.isCurrentUser ? "#D1FAE5" : "#FFFFFF",
-                      border: item.isCurrentUser ? "2px solid #10B981" : "1px solid #D1FAE5",
+                      backgroundColor: item.isMe ? "#D1FAE5" : "#FFFFFF",
+                      border: item.isMe ? "2px solid #10B981" : "1px solid #D1FAE5",
                     }}
                   >
                     <div className="flex items-center gap-3">
@@ -221,9 +225,9 @@ const Leaderboard = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-bold" style={{ color: "#0F4C3A" }}>
-                            {item.isCurrentUser ? item.name : item.anonymousName}
+                            {item.name}
                           </p>
-                          {item.isCurrentUser && (
+                          {item.isMe && (
                             <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}>나</span>
                           )}
                         </div>
@@ -231,7 +235,7 @@ const Leaderboard = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-xl font-bold" style={{ color: "#10B981" }}>{item.currentXp}</p>
+                      <p className="text-xl font-bold" style={{ color: "#10B981" }}>{item.xp}</p>
                       <p className="text-xs" style={{ color: "#6B7280" }}>XP</p>
                     </div>
                   </div>

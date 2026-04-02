@@ -214,10 +214,10 @@ const Admin_Vote = () => {
             <span className="text-white font-bold text-lg">COMA-ROOM</span>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate("/notifications")}>
+            <button onClick={() => navigate("/admin/notice")}>
               <Bell className="w-5 h-5 text-white" />
             </button>
-            <button onClick={() => navigate("/profile")}>
+            <button onClick={() => navigate("/admin")}>
               <User className="w-5 h-5 text-white" />
             </button>
             <DropdownMenu>
@@ -227,7 +227,7 @@ const Admin_Vote = () => {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-32 bg-white border border-gray-200 shadow-lg rounded-lg z-[100]">
-                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer hover:bg-gray-50" onClick={() => navigate("/")}>
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer hover:bg-gray-50" onClick={() => navigate("/admin")}>
                   <User className="w-4 h-4" style={{ color: "#6B7280" }} />
                   <span style={{ color: "#0F4C3A" }}>로그아웃</span>
                 </DropdownMenuItem>

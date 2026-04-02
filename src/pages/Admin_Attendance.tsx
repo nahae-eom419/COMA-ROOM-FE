@@ -1,4 +1,16 @@
-import { useState } from "react";
+// ===================================================
+// 관리자 출석 관리 페이지
+// - 이벤트 생성 + QR 코드 발급으로 출석 세션 시작
+// - 진행 중 세션은 QR 코드를 화면에 표시 (부원이 스캔)
+// - 세션 종료 시 완료 기록으로 저장
+// - 유형 필터 / 페이지네이션으로 기록 목록 관리
+// - 기록 삭제 / 상세보기(출석자 명단) 기능
+// - POST /api/admin/event → 이벤트 생성
+// - POST /api/admin/event/attendances → QR 코드 발급
+// - GET /api/admin/member/manage → 전체/활성 부원 수 조회
+// ===================================================
+
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bell, User, Menu, Users, Sparkles, LayoutDashboard,
@@ -20,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
+// 활동 유형 목록 - value: UI 표시값, category: 백엔드 enum 값
 const ACTIVITY_TYPES = [
   { value: "정기회의", label: "정기회의", category: "REGULAR_MEETING" },
   { value: "스터디",   label: "스터디",   category: "STUDY" },
@@ -66,33 +79,64 @@ type CreateAttendanceResponse = {
 
 const Admin_Attendance = () => {
   const navigate = useNavigate();
+
+  // 현재 출석 기록 목록의 페이지 번호
   const [currentPage, setCurrentPage] = useState(1);
+  // 출석 세션 진행 중 여부 (true: QR 코드 표시 상태)
   const [isSessionActive, setIsSessionActive] = useState(false);
+  // 발급된 QR 코드 ID (부원이 스캔하는 값)
   const [sessionId, setSessionId] = useState("");
   const [qrCodeId, setQrCodeId] = useState("");
+  // 현재 세션에서 실시간 출석한 인원 수
   const [currentAttendees, setCurrentAttendees] = useState(0);
+  // 폼 입력값 - 활동명, 유형, 장소, 날짜
   const [activityName, setActivityName] = useState("");
   const [activityType, setActivityType] = useState<ActivityType>("정기회의");
   const [location, setLocation] = useState("");
   const [eventDate, setEventDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
+  // 세션 시작 시각 (종료 시 소요 시간 계산용)
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  // 완료된 출석 세션 기록 목록 (클라이언트 측 관리)
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  // 유형 필터 선택값
   const [filterType, setFilterType] = useState<ActivityType | "all">("all");
+  // 삭제 확인 Dialog 상태
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  // 상세보기 Dialog 상태
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
+  // API 호출 중 중복 클릭 방지
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // 전체/활성 부원 수 (GET /api/admin/member/manage 에서 조회)
+  const [totalMember, setTotalMember] = useState<number | null>(null);
+  const [activateMember, setActivateMember] = useState<number | null>(null);
 
+  // 마운트 시 부원 수 조회
+  useEffect(() => {
+    apiFetch<{ totalMember: number; activateMember: number }>("/api/admin/member/manage?page=1")
+      .then((data) => {
+        setTotalMember(data.totalMember);
+        setActivateMember(data.activateMember);
+      })
+      .catch(() => {});
+  }, []);
+
+  // 선택된 필터에 맞는 기록만 필터링
   const filteredRecords =
     filterType === "all"
       ? attendanceRecords
       : attendanceRecords.filter((record) => record.activityType === filterType);
 
+  // 필터링된 기록의 총 페이지 수 (페이지당 3건)
   const totalPages = Math.ceil(filteredRecords.length / 3) || 1;
 
+  // 출석 세션 시작
+  // 1. POST /api/admin/event - 이벤트 생성
+  // 2. POST /api/admin/event/attendances - QR 코드 발급 (유효시간 10분)
+  // 3. 세션 활성화 상태로 전환
   const handleStartSession = async () => {
     if (!activityName.trim()) return;
 
@@ -139,6 +183,9 @@ const Admin_Attendance = () => {
     }
   };
 
+  // 출석 세션 종료
+  // - 소요 시간 계산 후 기록을 attendanceRecords에 추가
+  // - 폼 및 세션 상태 초기화
   const handleEndSession = () => {
     if (sessionStartTime && activityName.trim()) {
       const now = new Date();
@@ -172,11 +219,13 @@ const Admin_Attendance = () => {
     setSessionStartTime(null);
   };
 
+  // 삭제 버튼 클릭 - 삭제 대상 ID 저장 후 확인 Dialog 열기
   const handleDeleteClick = (id: number) => {
     setDeleteTargetId(id);
     setIsDeleteDialogOpen(true);
   };
 
+  // 삭제 확인 - 해당 ID의 기록을 목록에서 제거
   const handleConfirmDelete = () => {
     if (deleteTargetId !== null) {
       setAttendanceRecords((prev) => prev.filter((r) => r.id !== deleteTargetId));
@@ -185,6 +234,7 @@ const Admin_Attendance = () => {
     setDeleteTargetId(null);
   };
 
+  // 상세보기 버튼 클릭 - 선택된 기록을 저장 후 상세 Dialog 열기
   const handleDetailClick = (record: AttendanceRecord) => {
     setSelectedRecord(record);
     setIsDetailModalOpen(true);
@@ -199,10 +249,10 @@ const Admin_Attendance = () => {
             <span className="text-white font-bold text-lg">COMA-ROOM</span>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate("/notifications")}>
+            <button onClick={() => navigate("/admin/notice")}>
               <Bell className="w-5 h-5 text-white" />
             </button>
-            <button onClick={() => navigate("/profile")}>
+            <button onClick={() => navigate("/admin")}>
               <User className="w-5 h-5 text-white" />
             </button>
             <DropdownMenu>
@@ -214,7 +264,7 @@ const Admin_Attendance = () => {
               <DropdownMenuContent align="end" className="w-32 bg-white border border-gray-200 shadow-lg rounded-lg z-[100]">
                 <DropdownMenuItem
                   className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate("/admin")}
                 >
                   <User className="w-4 h-4" style={{ color: "#6B7280" }} />
                   <span style={{ color: "#0F4C3A" }}>로그아웃</span>
@@ -240,11 +290,11 @@ const Admin_Attendance = () => {
 
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="rounded-xl p-4 text-center" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
-            <p className="text-2xl font-bold" style={{ color: "#10B981" }}>85</p>
+            <p className="text-2xl font-bold" style={{ color: "#10B981" }}>{totalMember ?? "-"}</p>
             <p className="text-xs" style={{ color: "#6B7280" }}>전체 부원</p>
           </div>
           <div className="rounded-xl p-4 text-center" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
-            <p className="text-2xl font-bold" style={{ color: "#10B981" }}>83</p>
+            <p className="text-2xl font-bold" style={{ color: "#10B981" }}>{activateMember ?? "-"}</p>
             <p className="text-xs" style={{ color: "#6B7280" }}>활성 부원</p>
           </div>
           <div className="rounded-xl p-4 text-center" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>

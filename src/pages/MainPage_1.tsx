@@ -1,3 +1,10 @@
+// ===================================================
+// 일반 사용자 메인 페이지 (홈)
+// - 로그인한 부원의 XP, 출석 횟수, 랭킹 등 대시보드 표시
+// - 다가오는 일정 / 최근 공지 / 진행 중인 투표 미리보기
+// - GET /api/member/main 으로 전체 데이터를 한 번에 조회
+// ===================================================
+
 import {
   Bell,
   User,
@@ -54,6 +61,7 @@ type VotePoll = {
   voteId: number;
 };
 
+// GET /api/member/main 응답 타입
 type MainData = {
   currentXp: number;
   myRank: number;
@@ -69,9 +77,13 @@ type MainData = {
 
 const MainPage = () => {
   const navigate = useNavigate();
+
+  // 서버에서 받은 메인 대시보드 데이터
   const [mainData, setMainData] = useState<MainData | null>(null);
+  // 데이터 로딩 중 여부 (스켈레톤/스피너 표시용)
   const [loading, setLoading] = useState(true);
 
+  // 컴포넌트 마운트 시 메인 데이터 조회
   useEffect(() => {
     const fetchMain = async () => {
       try {
@@ -86,6 +98,7 @@ const MainPage = () => {
     fetchMain();
   }, []);
 
+  // null 안전 처리: 데이터 로딩 전에는 기본값 사용
   const displayXP = mainData?.currentXp ?? 0;
   const displayRank = mainData?.myRank ?? 0;
   const attendanceCount = mainData?.statAttendanceCount ?? 0;
@@ -93,6 +106,8 @@ const MainPage = () => {
   const semester = mainData?.semester ?? "";
   const userName = mainData?.userName ?? "";
   const remainingXp = mainData?.remainingXp ?? 0;
+
+  // XP 프로그레스바 퍼센트 계산 (다음 등수까지 남은 XP 기준)
   const xpProgressPercent = remainingXp > 0
     ? Math.min(100, Math.round((displayXP / (displayXP + remainingXp)) * 100))
     : 100;
@@ -111,6 +126,7 @@ const MainPage = () => {
           <button onClick={() => navigate("/profile")}>
             <User className="w-5 h-5" style={{ color: "#6B7280" }} />
           </button>
+          {/* 햄버거 메뉴 - 일정/투표/스터디/앨범/설정 이동 */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="focus:outline-none">
@@ -144,10 +160,12 @@ const MainPage = () => {
       </header>
 
       <main className="flex-1 px-4 py-4 pb-20 space-y-5">
+        {/* 로딩 중 텍스트 표시 */}
         {loading ? (
           <div className="text-center py-10 text-sm" style={{ color: "#6B7280" }}>불러오는 중...</div>
         ) : (
           <>
+            {/* XP 카드 - 현재 XP, 다음 등수까지 남은 XP, 출석 체크 버튼 */}
             <div className="rounded-2xl p-5 text-white" style={{ background: "linear-gradient(135deg, #10B981 0%, #0A6647 100%)" }}>
               <p className="text-sm opacity-90 mb-1">{semester}</p>
               <h1 className="text-xl font-bold mb-3">안녕하세요, {userName}님</h1>
@@ -160,10 +178,12 @@ const MainPage = () => {
               </div>
 
               <p className="text-xs opacity-80 mb-2">다음 등수까지 남은 XP: {remainingXp}</p>
+              {/* XP 프로그레스바 */}
               <div className="w-full h-2 rounded-full mb-4" style={{ backgroundColor: "rgba(255,255,255,0.3)" }}>
                 <div className="h-full rounded-full" style={{ width: `${xpProgressPercent}%`, backgroundColor: "#FFFFFF" }} />
               </div>
 
+              {/* 출석 체크 버튼 - /attendance 페이지로 이동 */}
               <button
                 className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
                 style={{ backgroundColor: "#0A6647", color: "#FFFFFF" }}
@@ -177,6 +197,7 @@ const MainPage = () => {
               <p className="text-center text-xs mt-3 opacity-80">출석하면 3XP를 받을 수 있어요.</p>
             </div>
 
+            {/* 통계 카드 4개 - XP / 출석 횟수 / 행사 참여 / 현재 순위 */}
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl p-4" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
                 <div className="flex items-center gap-1 text-xs mb-1" style={{ color: "#6B7280" }}>
@@ -196,6 +217,7 @@ const MainPage = () => {
                 </div>
                 <p className="text-3xl font-bold" style={{ color: "#0F4C3A" }}>{eventCount}회</p>
               </div>
+              {/* 순위 클릭 시 리더보드 페이지로 이동 */}
               <div
                 className="rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow"
                 style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}
@@ -208,6 +230,7 @@ const MainPage = () => {
               </div>
             </div>
 
+            {/* 다가오는 일정 섹션 - upcomingEvent가 있을 때만 표시 */}
             {mainData?.upcomingEvent && (
               <section>
                 <div className="flex items-center justify-between mb-3">
@@ -241,6 +264,7 @@ const MainPage = () => {
               </section>
             )}
 
+            {/* 공지사항 미리보기 - notice가 있을 때만 표시 */}
             {mainData?.notice && (
               <section>
                 <div className="flex items-center justify-between mb-3">
@@ -269,6 +293,7 @@ const MainPage = () => {
               </section>
             )}
 
+            {/* 진행 중인 투표 미리보기 - votePoll이 있을 때만 표시 */}
             {mainData?.votePoll && (
               <section>
                 <div className="flex items-center justify-between mb-3">
@@ -308,6 +333,7 @@ const MainPage = () => {
           <p className="text-sm" style={{ color: "#6B7280" }}>즐거운 동아리 시간을 만들어 보세요.</p>
         </div>
 
+        {/* 푸터 - 동아리 소개, 바로가기, 문의 */}
         <footer className="rounded-xl p-6 space-y-6" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -341,6 +367,7 @@ const MainPage = () => {
         </footer>
       </main>
 
+      {/* 하단 네비게이션 바 - 홈/일정/공지/마이 */}
       <nav className="fixed bottom-0 left-0 right-0 flex items-center justify-around py-3 border-t z-50" style={{ backgroundColor: "#FFFFFF", borderColor: "#D1FAE5" }}>
         <button className="flex flex-col items-center gap-1">
           <Home className="w-5 h-5" style={{ color: "#10B981" }} />

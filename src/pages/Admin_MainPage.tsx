@@ -1,3 +1,10 @@
+// ===================================================
+// 관리자 메인 페이지 (대시보드)
+// - 빠른 관리 메뉴 (부원/XP/출석/투표/공지/통계)
+// - 이번 학기 상위 5명 랭킹 표시
+// - GET /api/member/leaderboard 로 랭킹 데이터 조회
+// ===================================================
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, User, Menu, Users, Sparkles, CheckCircle, Calendar, ArrowRight, LayoutDashboard, UserCheck, Megaphone, BarChart3, MessageSquare, PartyPopper, ClipboardCheck, Trophy, Loader2 } from "lucide-react";
@@ -10,26 +17,35 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// 랭킹 항목 타입
 interface RankingItem {
   rank: number;
   name: string;
-  anonymousName: string;
   major: string;
-  currentXp: number;
-  isCurrentUser: boolean;
+  xp: number;
+  isMe: boolean; // 현재 로그인한 사용자 여부
 }
 
+// GET /api/member/leaderboard 응답 타입
 interface LeaderboardResponse {
-  myRanking: RankingItem;
-  topThreeRankings: RankingItem[];
-  allRankings: RankingItem[];
+  myRanking: {
+    rank: number;
+    name: string;
+    major: string;
+    xp: number;
+  };
+  topThreeRankings: RankingItem[]; // 1~3위
+  allRankings: RankingItem[];      // 전체 순위 목록
 }
 
 const Admin_MainPage = () => {
   const navigate = useNavigate();
+
+  // 서버에서 받아온 전체 랭킹 목록
   const [rankings, setRankings] = useState<RankingItem[]>([]);
   const [rankingsLoading, setRankingsLoading] = useState(true);
 
+  // 마운트 시 랭킹 데이터 조회
   useEffect(() => {
     apiFetch<LeaderboardResponse>("/api/member/leaderboard")
       .then((data) => setRankings(data.allRankings ?? []))
@@ -37,6 +53,7 @@ const Admin_MainPage = () => {
       .finally(() => setRankingsLoading(false));
   }, []);
 
+  // 순위별 배경색 - 1위: 금색, 2위: 녹색, 3위: 금색, 나머지: 흰색
   const getRankBgColor = (rank: number) => {
     if (rank === 1) return "#FEE685";
     if (rank === 2) return "#DCFCE7";
@@ -44,6 +61,7 @@ const Admin_MainPage = () => {
     return "#FFFFFF";
   };
 
+  // 순위별 이름 텍스트 색상 - 상위 3명은 초록색 계열
   const getRankTextColor = (rank: number) => {
     if (rank <= 3) return "#008236";
     return "#0F4C3A";
@@ -59,10 +77,10 @@ const Admin_MainPage = () => {
             <span className="text-white font-bold text-lg">COMA-ROOM</span>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/notifications')}>
+            <button onClick={() => navigate('/admin/notice')}>
               <Bell className="w-5 h-5 text-white" />
             </button>
-            <button onClick={() => navigate('/profile')}>
+            <button onClick={() => navigate('/admin')}>
               <User className="w-5 h-5 text-white" />
             </button>
             <DropdownMenu>
@@ -72,7 +90,7 @@ const Admin_MainPage = () => {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-32 bg-white border border-gray-200 shadow-lg rounded-lg z-[100]">
-                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer hover:bg-gray-50" onClick={() => navigate('/')}>
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer hover:bg-gray-50" onClick={() => navigate('/admin')}>
                   <User className="w-4 h-4" style={{ color: '#6B7280' }} />
                   <span style={{ color: '#0F4C3A' }}>로그아웃</span>
                 </DropdownMenuItem>
@@ -80,7 +98,7 @@ const Admin_MainPage = () => {
             </DropdownMenu>
           </div>
         </div>
-        {/* Admin Mode Badge */}
+        {/* 관리자 모드 배지 */}
         <div className="mt-2">
           <span
             className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium"
@@ -92,9 +110,8 @@ const Admin_MainPage = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 px-4 py-6 pb-24">
-        {/* Welcome Card */}
+        {/* 환영 카드 */}
         <div
           className="rounded-2xl p-5 mb-6"
           style={{ background: 'linear-gradient(135deg, #10B981 0%, #008236 100%)' }}
@@ -103,13 +120,12 @@ const Admin_MainPage = () => {
           <h1 className="text-xl font-bold text-white">안녕하세요, 운영자 님! 👋</h1>
         </div>
 
-        {/* Dashboard Title */}
         <div className="mb-4">
           <h2 className="text-lg font-bold" style={{ color: '#10B981' }}>운영자 대시보드</h2>
           <p className="text-sm" style={{ color: '#6B7280' }}>COMA-ROOM 전체 관리 및 통계를 확인하세요</p>
         </div>
 
-        {/* Quick Management Section */}
+        {/* 빠른 관리 메뉴 - 각 관리 페이지로 이동하는 카드 */}
         <h3 className="font-bold mb-3" style={{ color: '#0F4C3A' }}>빠른 관리</h3>
         <div className="grid grid-cols-2 gap-3 mb-6">
           <div
@@ -184,28 +200,31 @@ const Admin_MainPage = () => {
           </div>
         </div>
 
-        {/* Semester Ranking Section */}
+        {/* 이번 학기 랭킹 - 상위 5명만 표시 */}
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-bold" style={{ color: '#0F4C3A' }}>이번 학기 랭킹</h3>
           <button
             className="text-sm flex items-center gap-1"
             style={{ color: '#10B981' }}
-            onClick={() => navigate('/leaderboard')}
+            onClick={() => navigate('/admin/leaderboard')}
           >
             전체보기 <ArrowRight className="w-3 h-3" />
           </button>
         </div>
 
+        {/* 랭킹 로딩 중 */}
         {rankingsLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#10B981' }} />
           </div>
         ) : rankings.length === 0 ? (
+          // 랭킹 데이터 없음
           <div className="rounded-xl p-6 text-center" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D1FAE5' }}>
             <Trophy className="w-8 h-8 mx-auto mb-2" style={{ color: '#D1FAE5' }} />
             <p className="text-sm" style={{ color: '#6B7280' }}>랭킹 데이터가 없습니다.</p>
           </div>
         ) : (
+          // 상위 5명 랭킹 카드 목록
           <div className="space-y-2 mb-6">
             {rankings.slice(0, 5).map((member) => (
               <div
@@ -216,6 +235,7 @@ const Admin_MainPage = () => {
                   border: member.rank > 3 ? '1px solid #D1FAE5' : 'none',
                 }}
               >
+                {/* 순위 원형 배지 */}
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm"
                   style={{
@@ -225,6 +245,7 @@ const Admin_MainPage = () => {
                 >
                   {member.rank}
                 </div>
+                {/* 이름 및 학과 */}
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm" style={{ color: getRankTextColor(member.rank) }}>
@@ -233,8 +254,9 @@ const Admin_MainPage = () => {
                   </div>
                   <p className="text-xs" style={{ color: '#6B7280' }}>{member.major}</p>
                 </div>
+                {/* XP */}
                 <div className="text-right">
-                  <p className="text-xl font-bold" style={{ color: '#10B981' }}>{member.currentXp}</p>
+                  <p className="text-xl font-bold" style={{ color: '#10B981' }}>{member.xp ?? 0}</p>
                   <p className="text-xs" style={{ color: '#6B7280' }}>XP</p>
                 </div>
               </div>
@@ -243,7 +265,7 @@ const Admin_MainPage = () => {
         )}
       </main>
 
-      {/* Bottom Navigation */}
+      {/* 하단 네비게이션 바 */}
       <nav className="fixed bottom-0 left-0 right-0 flex items-center justify-around py-3 border-t" style={{ backgroundColor: '#FFFFFF', borderColor: '#D1FAE5' }}>
         <button className="flex flex-col items-center gap-1">
           <LayoutDashboard className="w-5 h-5" style={{ color: '#10B981' }} />

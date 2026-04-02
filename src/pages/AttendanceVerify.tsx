@@ -1,3 +1,11 @@
+// ===================================================
+// QR 출석 인증 페이지
+// - 카메라로 QR 코드를 스캔해 출석 체크
+// - html5-qrcode 라이브러리로 카메라 제어
+// - POST /api/event/attendances/checks 로 출석 처리
+// - 상태 흐름: idle → scanning → verifying → verified / error
+// ===================================================
+
 import { useState, useEffect, useRef } from "react";
 import {
   Bell,
@@ -20,7 +28,6 @@ import {
 } from "lucide-react";
 import ComaLogo from "@/components/ComaLogo";
 import { useNavigate } from "react-router-dom";
-import { useXP } from "@/contexts/XPContext";
 import { Html5Qrcode } from "html5-qrcode";
 import { apiFetch } from "@/api/client";
 import {
@@ -38,34 +45,45 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
+// QR 스캔 진행 상태
+// idle: 초기 / scanning: 카메라 활성화 중 / verifying: 서버 인증 중 / verified: 성공 / error: 실패
 type ScanState = "idle" | "scanning" | "verifying" | "verified" | "error";
 
 const AttendanceVerify = () => {
   const navigate = useNavigate();
-  const { addXP } = useXP();
 
+  // html5-qrcode 인스턴스 참조 (컴포넌트 언마운트 시 정리용)
   const scannerRef = useRef<Html5Qrcode | null>(null);
+
+  // 현재 스캔 상태
   const [scanState, setScanState] = useState<ScanState>("idle");
+  // 에러 발생 시 사용자에게 보여줄 메시지
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // 스캔된 QR 코드 값 (qrCodeId)
   const [scannedSession, setScannedSession] = useState<string | null>(null);
+  // 출석 성공 시 완료 모달 표시 여부
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  // 카메라 권한 허용 여부 (null: 아직 확인 안 함)
   const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
 
+  // 카메라(QR 스캐너) 중지 및 정리
   const stopScanner = async () => {
     if (scannerRef.current) {
       try {
         const state = scannerRef.current.getState();
+        // state === 2: SCANNING 상태일 때만 stop 호출
         if (state === 2) {
           await scannerRef.current.stop();
         }
         scannerRef.current.clear();
       } catch {
-        // ignore
+        // 이미 중지된 경우 무시
       }
       scannerRef.current = null;
     }
   };
 
+  // 카메라 시작 및 QR 스캔 활성화
   const startScanner = async () => {
     setErrorMessage(null);
     setScanState("scanning");
@@ -75,18 +93,20 @@ const AttendanceVerify = () => {
       scannerRef.current = scanner;
 
       await scanner.start(
-        { facingMode: "environment" },
+        { facingMode: "environment" }, // 후면 카메라 사용
         { fps: 10, qrbox: { width: 240, height: 240 } },
         (decodedText) => {
+          // QR 코드 인식 시 처리
           handleScanResult(decodedText);
         },
-        () => {}
+        () => {} // 인식 실패 프레임은 무시
       );
 
       setCameraPermission(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.toLowerCase().includes("permission") || msg.toLowerCase().includes("notallowed")) {
+        // 카메라 권한 거부
         setCameraPermission(false);
         setErrorMessage("카메라 권한이 필요합니다. 브라우저 설정에서 카메라를 허용해 주세요.");
       } else {
@@ -96,6 +116,11 @@ const AttendanceVerify = () => {
     }
   };
 
+  // QR 코드 인식 후 서버 출석 인증 처리
+  // 1. 스캐너 중지
+  // 2. POST /api/event/attendances/checks 호출
+  // 3. 성공 → verified 상태 + 완료 모달 표시
+  // 4. 실패 → 에러 메시지 종류별 분기
   const handleScanResult = async (text: string) => {
     await stopScanner();
     setScanState("verifying");
@@ -117,7 +142,6 @@ const AttendanceVerify = () => {
 
       setScanState("verified");
       setShowSuccessModal(true);
-      addXP(3, "출석 인증", "출석");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       if (message.includes("만료") || message.includes("유효")) {
@@ -133,6 +157,7 @@ const AttendanceVerify = () => {
     }
   };
 
+  // 페이지 진입 시 즉시 카메라 시작, 이탈 시 카메라 정리
   useEffect(() => {
     startScanner();
     return () => {
@@ -141,11 +166,13 @@ const AttendanceVerify = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 완료 모달 확인 버튼 - 출석 기록 페이지로 이동
   const handleConfirm = () => {
     setShowSuccessModal(false);
     navigate("/attendance");
   };
 
+  // 에러 발생 후 재시도 버튼
   const handleRetry = () => {
     setErrorMessage(null);
     startScanner();
@@ -197,6 +224,7 @@ const AttendanceVerify = () => {
 
       <main className="flex-1 px-4 py-4 space-y-5">
         <div className="flex items-center gap-3">
+          {/* 뒤로가기 버튼 - 스캐너 정리 후 이전 페이지로 */}
           <button
             onClick={() => {
               stopScanner();
@@ -209,6 +237,7 @@ const AttendanceVerify = () => {
           </button>
           <div>
             <h1 className="text-2xl font-bold" style={{ color: "#10B981" }}>QR 출석 인증</h1>
+            {/* 현재 상태에 따라 안내 문구 변경 */}
             <p className="text-sm" style={{ color: "#6B7280" }}>
               {scanState === "scanning" && "QR 코드를 프레임 안에 비춰 주세요."}
               {scanState === "verifying" && "출석을 인증하고 있습니다..."}
@@ -218,10 +247,13 @@ const AttendanceVerify = () => {
           </div>
         </div>
 
+        {/* 카메라 뷰 영역 */}
         <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}>
           <div className="relative bg-black" style={{ minHeight: 300 }}>
+            {/* html5-qrcode가 이 div 안에 카메라 스트림을 렌더링 */}
             <div id="qr-reader" className="w-full" />
 
+            {/* scanning: QR 인식 가이드 프레임 오버레이 */}
             {scanState === "scanning" && (
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                 <div className="relative" style={{ width: 240, height: 240 }}>
@@ -229,6 +261,7 @@ const AttendanceVerify = () => {
                   <span className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 rounded-tr-lg" style={{ borderColor: "#10B981" }} />
                   <span className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 rounded-bl-lg" style={{ borderColor: "#10B981" }} />
                   <span className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 rounded-br-lg" style={{ borderColor: "#10B981" }} />
+                  {/* 스캔 중임을 나타내는 수평 라인 애니메이션 */}
                   <div
                     className="absolute left-2 right-2 h-0.5 animate-bounce"
                     style={{ backgroundColor: "#10B981", top: "50%" }}
@@ -237,6 +270,7 @@ const AttendanceVerify = () => {
               </div>
             )}
 
+            {/* verifying: 서버 인증 중 로딩 오버레이 */}
             {scanState === "verifying" && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3" style={{ backgroundColor: "rgba(15,76,58,0.85)" }}>
                 <Loader2 className="w-12 h-12 animate-spin" style={{ color: "#10B981" }} />
@@ -249,6 +283,7 @@ const AttendanceVerify = () => {
               </div>
             )}
 
+            {/* verified: 출석 완료 오버레이 */}
             {scanState === "verified" && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3" style={{ backgroundColor: "rgba(16,185,129,0.9)" }}>
                 <CheckCircle2 className="w-16 h-16 text-white" />
@@ -256,6 +291,7 @@ const AttendanceVerify = () => {
               </div>
             )}
 
+            {/* idle/error: 카메라 준비 중 상태 */}
             {(scanState === "idle" || scanState === "error") && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4" style={{ backgroundColor: "#0F4C3A", minHeight: 300 }}>
                 <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(16,185,129,0.2)" }}>
@@ -266,6 +302,7 @@ const AttendanceVerify = () => {
             )}
           </div>
 
+          {/* 카메라 하단 상태 텍스트 */}
           <div className="px-4 py-3 text-center" style={{ borderTop: "1px solid #D1FAE5" }}>
             {scanState === "scanning" && (
               <p className="text-sm font-medium flex items-center justify-center gap-2" style={{ color: "#10B981" }}>
@@ -285,6 +322,7 @@ const AttendanceVerify = () => {
           </div>
         </div>
 
+        {/* 에러 메시지 배너 */}
         {errorMessage && (
           <div className="rounded-xl p-4 flex items-start gap-3" style={{ backgroundColor: "#FFF1F2", border: "1px solid #FFE4E6" }}>
             <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" style={{ color: "#C70036" }} />
@@ -292,6 +330,7 @@ const AttendanceVerify = () => {
           </div>
         )}
 
+        {/* 카메라 권한 거부 시 설정 안내 */}
         {cameraPermission === false && (
           <div className="rounded-xl p-4" style={{ backgroundColor: "#FFF7ED", border: "1px solid #FED7AA" }}>
             <h3 className="font-semibold text-sm mb-2" style={{ color: "#92400E" }}>카메라 권한 설정 방법</h3>
@@ -303,6 +342,7 @@ const AttendanceVerify = () => {
           </div>
         )}
 
+        {/* idle/error 상태: 카메라 다시 시작 버튼 */}
         {(scanState === "idle" || scanState === "error") && (
           <Button
             onClick={handleRetry}
@@ -314,6 +354,7 @@ const AttendanceVerify = () => {
           </Button>
         )}
 
+        {/* scanning 상태: 취소 버튼 */}
         {scanState === "scanning" && (
           <Button
             onClick={() => {
@@ -327,6 +368,7 @@ const AttendanceVerify = () => {
           </Button>
         )}
 
+        {/* 이용 안내 */}
         {(scanState === "idle" || scanState === "scanning") && (
           <div className="rounded-xl p-4" style={{ backgroundColor: "#F0FDF4" }}>
             <h3 className="font-semibold text-sm mb-3" style={{ color: "#0F4C3A" }}>안내사항</h3>
@@ -340,6 +382,7 @@ const AttendanceVerify = () => {
         )}
       </main>
 
+      {/* 출석 완료 성공 모달 */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
         <DialogContent className="rounded-2xl max-w-sm mx-auto" hideCloseButton>
           <DialogHeader className="text-center">
@@ -351,6 +394,7 @@ const AttendanceVerify = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2 mt-4">
+            {/* 확인 → 출석 기록 페이지로 이동 */}
             <Button
               onClick={handleConfirm}
               className="w-full h-12 text-base font-semibold text-white rounded-xl"
@@ -370,6 +414,7 @@ const AttendanceVerify = () => {
         </DialogContent>
       </Dialog>
 
+      {/* 하단 네비게이션 - 이탈 시 스캐너 정리 후 페이지 이동 */}
       <nav className="flex items-center justify-around py-3 border-t sticky bottom-0" style={{ backgroundColor: "#FFFFFF", borderColor: "#D1FAE5" }}>
         <button className="flex flex-col items-center gap-1" onClick={() => { stopScanner(); navigate("/main"); }}>
           <Home className="w-5 h-5" style={{ color: "#6B7280" }} />
