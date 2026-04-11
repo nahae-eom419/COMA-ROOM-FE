@@ -89,6 +89,16 @@ const AttendanceVerify = () => {
     setScanState("scanning");
 
     try {
+      // 모바일 브라우저에서 카메라 권한 다이얼로그를 반드시 표시하기 위해
+      // html5-qrcode 시작 전 getUserMedia로 명시적 권한 요청 후 스트림 즉시 해제
+      if (navigator.mediaDevices?.getUserMedia) {
+        const tempStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+        });
+        // 권한 확인 용도이므로 html5-qrcode와 충돌하지 않게 즉시 해제
+        tempStream.getTracks().forEach((track) => track.stop());
+      }
+
       const scanner = new Html5Qrcode("qr-reader");
       scannerRef.current = scanner;
 
@@ -105,12 +115,18 @@ const AttendanceVerify = () => {
       setCameraPermission(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.toLowerCase().includes("permission") || msg.toLowerCase().includes("notallowed")) {
+      if (
+        msg.toLowerCase().includes("permission") ||
+        msg.toLowerCase().includes("notallowed") ||
+        msg.toLowerCase().includes("denied")
+      ) {
         // 카메라 권한 거부
         setCameraPermission(false);
         setErrorMessage("카메라 권한이 필요합니다. 브라우저 설정에서 카메라를 허용해 주세요.");
+      } else if (msg.toLowerCase().includes("https") || msg.toLowerCase().includes("secure")) {
+        setErrorMessage("카메라는 HTTPS 환경에서만 사용할 수 있습니다.");
       } else {
-        setErrorMessage("카메라를 시작할 수 없습니다. 다시 시도해 주세요.");
+        setErrorMessage(`카메라를 시작할 수 없습니다. 다시 시도해 주세요. (${msg})`);
       }
       setScanState("error");
     }
@@ -157,9 +173,8 @@ const AttendanceVerify = () => {
     }
   };
 
-  // 페이지 진입 시 즉시 카메라 시작, 이탈 시 카메라 정리
+  // 페이지 이탈 시 카메라 정리 (모바일 권한 문제로 auto-start 제거: 사용자 제스처 필요)
   useEffect(() => {
-    startScanner();
     return () => {
       stopScanner();
     };
@@ -297,7 +312,7 @@ const AttendanceVerify = () => {
                 <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(16,185,129,0.2)" }}>
                   <Camera className="w-10 h-10" style={{ color: "#10B981" }} />
                 </div>
-                <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>카메라를 켜고 있습니다</p>
+                <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>아래 버튼을 눌러 카메라를 시작하세요</p>
               </div>
             )}
           </div>
@@ -317,7 +332,7 @@ const AttendanceVerify = () => {
               <p className="text-sm font-medium" style={{ color: "#10B981" }}>출석 인증 완료</p>
             )}
             {(scanState === "idle" || scanState === "error") && (
-              <p className="text-sm" style={{ color: "#6B7280" }}>카메라를 켜고 있습니다</p>
+              <p className="text-sm" style={{ color: "#6B7280" }}>아래 버튼을 눌러 카메라를 시작하세요</p>
             )}
           </div>
         </div>
