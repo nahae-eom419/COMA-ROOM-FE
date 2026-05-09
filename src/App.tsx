@@ -34,6 +34,7 @@ import Admin_Vote_Create from "./pages/Admin_Vote_Create";
 import Admin_Notice from "./pages/Admin_Notice";
 import Admin_Leaderboard from "./pages/Admin_Leaderboard";
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -49,31 +50,31 @@ const App = () => (
               <BrowserRouter>
                 <Routes>
               <Route path="/" element={<Login />} />
-              <Route path="/main" element={<MainPage_1 />} />
-              <Route path="/attendance" element={<Attendance />} />
-              <Route path="/attendance/verify" element={<AttendanceVerify />} />
-              <Route path="/schedule" element={<Schedule />} />
-              <Route path="/schedule-list" element={<ScheduleList />} />
-              <Route path="/vote-list" element={<VoteList />} />
-              <Route path="/album" element={<Album />} />
-              <Route path="/album/:id" element={<AlbumDetail />} />
-              <Route path="/album/upload" element={<AlbumUpload />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/xp-details" element={<XPDetails />} />
-              <Route path="/notice" element={<Notice />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/study" element={<Study />} />
-              <Route path="/leaderboard" element={<Leaderboard />} />
-              <Route path="/admin" element={<Admin_MainPage />} />
-              <Route path="/admin/members" element={<Admin_Members />} />
-              <Route path="/admin/xp" element={<Admin_XP />} />
-              <Route path="/admin/xp/grant" element={<Admin_XP_Grant />} />
-              <Route path="/admin/attendance" element={<Admin_Attendance />} />
-              <Route path="/admin/vote" element={<Admin_Vote />} />
-              <Route path="/admin/vote/create" element={<Admin_Vote_Create />} />
-              <Route path="/admin/notice" element={<Admin_Notice />} />
-              <Route path="/admin/leaderboard" element={<Admin_Leaderboard />} />
+              <Route path="/main" element={<ProtectedRoute><MainPage_1 /></ProtectedRoute>} />
+              <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+              <Route path="/attendance/verify" element={<ProtectedRoute><AttendanceVerify /></ProtectedRoute>} />
+              <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
+              <Route path="/schedule-list" element={<ProtectedRoute><ScheduleList /></ProtectedRoute>} />
+              <Route path="/vote-list" element={<ProtectedRoute><VoteList /></ProtectedRoute>} />
+              <Route path="/album" element={<ProtectedRoute><Album /></ProtectedRoute>} />
+              <Route path="/album/:id" element={<ProtectedRoute><AlbumDetail /></ProtectedRoute>} />
+              <Route path="/album/upload" element={<ProtectedRoute><AlbumUpload /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/xp-details" element={<ProtectedRoute><XPDetails /></ProtectedRoute>} />
+              <Route path="/notice" element={<ProtectedRoute><Notice /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/study" element={<ProtectedRoute><Study /></ProtectedRoute>} />
+              <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute requireAdmin><Admin_MainPage /></ProtectedRoute>} />
+              <Route path="/admin/members" element={<ProtectedRoute requireAdmin><Admin_Members /></ProtectedRoute>} />
+              <Route path="/admin/xp" element={<ProtectedRoute requireAdmin><Admin_XP /></ProtectedRoute>} />
+              <Route path="/admin/xp/grant" element={<ProtectedRoute requireAdmin><Admin_XP_Grant /></ProtectedRoute>} />
+              <Route path="/admin/attendance" element={<ProtectedRoute requireAdmin><Admin_Attendance /></ProtectedRoute>} />
+              <Route path="/admin/vote" element={<ProtectedRoute requireAdmin><Admin_Vote /></ProtectedRoute>} />
+              <Route path="/admin/vote/create" element={<ProtectedRoute requireAdmin><Admin_Vote_Create /></ProtectedRoute>} />
+              <Route path="/admin/notice" element={<ProtectedRoute requireAdmin><Admin_Notice /></ProtectedRoute>} />
+              <Route path="/admin/leaderboard" element={<ProtectedRoute requireAdmin><Admin_Leaderboard /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
                 </Routes>

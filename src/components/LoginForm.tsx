@@ -72,10 +72,10 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
         <Input
           id="password"
           type="password"
-          placeholder="생년월일 8자리"
+          placeholder="010xxxxxxxx"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          maxLength={8}
+          onChange={(e) => setPassword(e.target.value.replace(/\D/g, "").slice(0, 11))}
+          maxLength={11}
           className="h-12 border-0 rounded-lg text-sm"
           style={{ backgroundColor: '#F0FDF4', color: '#0F4C3A' }}
         />
@@ -97,9 +97,9 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
         </div>
         <ul className="text-sm space-y-1 ml-5" style={{ color: '#6B7280' }}>
           <li>• 아이디: <span className="font-medium" style={{ color: '#40C095' }}>학번</span></li>
-          <li>• 비밀번호: <span className="font-medium" style={{ color: '#40C095' }}>생년월일 8자리</span></li>
+          <li>• 비밀번호: <span className="font-medium" style={{ color: '#40C095' }}>전화번호 11자리</span></li>
         </ul>
-        <p className="text-xs ml-5" style={{ color: '#6B7280' }}>(예: 20060101)</p>
+        <p className="text-xs ml-5" style={{ color: '#6B7280' }}>(예: 01012345678)</p>
         <p className="text-xs ml-5 mt-2" style={{ color: '#0F4C3A' }}>
           ※ 최초 로그인 후 비밀번호를 변경해주세요.
         </p>

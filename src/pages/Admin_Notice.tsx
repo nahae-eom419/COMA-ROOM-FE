@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Bell, User, Menu, Users, Sparkles, ClipboardCheck, Megaphone,
   LayoutDashboard, FileText, Plus, Edit, Trash2,
@@ -59,9 +60,11 @@ const CATEGORY_OPTIONS: { label: string; value: NoticePriority }[] = [
 
 const Admin_Notice = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(false);
+  const [filterPriority, setFilterPriority] = useState<NoticePriority | null>(null);
 
   // Create modal states
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
@@ -95,8 +98,9 @@ const Admin_Notice = () => {
         noticePriority: n.noticePriority,
         date: n.createdAt?.split("T")[0],
       });
-      const pinned = (data.pinnedNoticeList ?? []).map(n => toNotice(n, true));
-      const opened = (data.openedNoticeList ?? []).map(n => toNotice(n, false));
+      const sortDesc = (a: Notice, b: Notice) => b.noticeId - a.noticeId;
+      const pinned = (data.pinnedNoticeList ?? []).map(n => toNotice(n, true)).sort(sortDesc);
+      const opened = (data.openedNoticeList ?? []).map(n => toNotice(n, false)).sort(sortDesc);
       setNotices([...pinned, ...opened]);
     } catch (e) {
       console.error("공지 목록 조회 실패:", e);
@@ -206,10 +210,10 @@ const Admin_Notice = () => {
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F8FFFE" }}>
       <header className="sticky top-0 z-50 px-4 py-3" style={{ backgroundColor: "#10B981" }}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <button className="flex items-center gap-2" onClick={() => navigate("/admin")}>
             <ComaLogo size="sm" />
             <span className="text-white font-bold text-lg">COMA-ROOM</span>
-          </div>
+          </button>
           <div className="flex items-center gap-4">
             <button onClick={() => navigate("/admin/notice")}>
               <Bell className="w-5 h-5 text-white" />
@@ -229,7 +233,7 @@ const Admin_Notice = () => {
               >
                 <DropdownMenuItem
                   className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate("/admin")}
+                  onClick={() => { logout(); navigate("/"); }}
                 >
                   <User className="w-4 h-4" style={{ color: "#6B7280" }} />
                   <span style={{ color: "#0F4C3A" }}>로그아웃</span>
@@ -240,7 +244,7 @@ const Admin_Notice = () => {
         </div>
       </header>
 
-      <main className="flex-1 p-4 max-w-md mx-auto w-full">
+      <main className="flex-1 p-4 pb-24 max-w-md mx-auto w-full">
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-xl font-bold" style={{ color: "#0F4C3A" }}>
             공지사항 관리
@@ -260,57 +264,52 @@ const Admin_Notice = () => {
         </p>
 
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div
-            className="rounded-xl p-3 text-center"
-            style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}
-          >
-            <p className="text-2xl font-bold" style={{ color: "#10B981" }}>
-              {normalCount}
-            </p>
-            <p className="text-xs" style={{ color: "#6B7280" }}>
-              일반
-            </p>
-          </div>
-          <div
-            className="rounded-xl p-3 text-center"
-            style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}
-          >
-            <p className="text-2xl font-bold" style={{ color: "#10B981" }}>
-              {importantCount}
-            </p>
-            <p className="text-xs" style={{ color: "#6B7280" }}>
-              중요
-            </p>
-          </div>
-          <div
-            className="rounded-xl p-3 text-center"
-            style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}
-          >
-            <p className="text-2xl font-bold" style={{ color: "#10B981" }}>
-              {urgentCount}
-            </p>
-            <p className="text-xs" style={{ color: "#6B7280" }}>
-              긴급
-            </p>
-          </div>
+          {(
+            [
+              { priority: "NORMAL" as NoticePriority, label: "일반", count: normalCount },
+              { priority: "IMPORTANT" as NoticePriority, label: "중요", count: importantCount },
+              { priority: "URGENT" as NoticePriority, label: "긴급", count: urgentCount },
+            ]
+          ).map(({ priority, label, count }) => {
+            const active = filterPriority === priority;
+            return (
+              <button
+                key={priority}
+                onClick={() => setFilterPriority(active ? null : priority)}
+                className="rounded-xl p-3 text-center transition-colors"
+                style={{
+                  backgroundColor: active ? "#10B981" : "#FFFFFF",
+                  border: active ? "2px solid #10B981" : "1px solid #D1FAE5",
+                }}
+              >
+                <p className="text-2xl font-bold" style={{ color: active ? "#FFFFFF" : "#10B981" }}>
+                  {count}
+                </p>
+                <p className="text-xs" style={{ color: active ? "#D1FAE5" : "#6B7280" }}>
+                  {label}
+                </p>
+              </button>
+            );
+          })}
         </div>
 
         {loading ? (
           <div className="text-center py-8 text-sm" style={{ color: "#6B7280" }}>
             불러오는 중...
           </div>
-        ) : notices.length === 0 ? (
-          <div
-            className="rounded-xl p-8 text-center"
-            style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}
-          >
-            <p className="text-sm" style={{ color: "#6B7280" }}>
-              등록된 공지사항이 없습니다
-            </p>
-          </div>
         ) : (
           <div className="space-y-3">
-            {notices.map((notice) => (
+            {(filterPriority ? notices.filter((n) => n.noticePriority === filterPriority) : notices).length === 0 ? (
+              <div
+                className="rounded-xl p-8 text-center"
+                style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1FAE5" }}
+              >
+                <p className="text-sm" style={{ color: "#6B7280" }}>
+                  {filterPriority ? `${PRIORITY_LABEL[filterPriority]} 공지사항이 없습니다` : "등록된 공지사항이 없습니다"}
+                </p>
+              </div>
+            ) : null}
+            {(filterPriority ? notices.filter((n) => n.noticePriority === filterPriority) : notices).map((notice) => (
               <div
                 key={notice.noticeId}
                 className="rounded-xl p-4"
